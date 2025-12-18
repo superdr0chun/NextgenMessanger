@@ -2,11 +2,11 @@
 
 .login-container {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
+  align-items: center; /* ← только горизонтальное центрирование */
   min-height: 100vh;
   background: linear-gradient(135deg, #444, #aaa, #ddd);
-  padding: 20px;
+  padding: 40px 20px 20px; /* 👈 верхний отступ уменьшен до 40px (настройте по вкусу) */
   box-sizing: border-box;
 }
 
@@ -63,7 +63,7 @@
   width: 100%;
   padding: 10px 10px 10px 40px; /* Отступ справа от иконки */
   border: none;
-  border-bottom: 2px solid #ccc;
+  border-bottom: 2px solid #b4b0b0;
   background: transparent;
   font-size: 12px;
   font-weight: 200;
@@ -132,4 +132,14 @@
 
 .forgot-password-button:hover {
   color: #444444;
+}
+
+/* Логотип — вне формы, по центру */
+.logo {
+  width: 90px; /* настройте под ваш макет */
+  height: auto;
+  margin-bottom: 24px; /* отступ до формы */
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
