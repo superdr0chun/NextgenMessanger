@@ -1,16 +1,13 @@
+// src/App.js
 import React from 'react';
-import './App.css';
+import Login from './Login'; // Импортируем наш компонент
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>Nextgen Messenger</h1>
-        <p>Добро пожаловать!</p>
-      </header>
+      <Login />
     </div>
   );
 }
 
 export default App;
-
