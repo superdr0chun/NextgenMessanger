@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NextgenMessanger.Application.Interfaces;
 using NextgenMessanger.Core.DTOs.Auth;
@@ -9,10 +11,12 @@ namespace NextgenMessanger.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IUserService _userService;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IUserService userService)
     {
         _authService = authService;
+        _userService = userService;
     }
 
     [HttpPost("register")]
@@ -62,6 +66,25 @@ public class AuthController : ControllerBase
     {
         await _authService.LogoutAsync(refreshTokenDto.RefreshToken);
         return Ok(new { message = "Logged out successfully" });
+    }
+
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<IActionResult> GetCurrentUser()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var user = await _userService.GetCurrentUserAsync(userId);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(user);
     }
 }
 
