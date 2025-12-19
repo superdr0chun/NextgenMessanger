@@ -1,0 +1,275 @@
+.chat-page {
+    font-family: Arial, sans-serif;
+    background-color: #1e1e1e;
+    color: white;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #333;
+    border-bottom: 1px solid #444;
+}
+
+.logo {
+    font-weight: bold;
+    font-size: 18px;
+    margin-right: 20px;
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    background-color: #444;
+    border-radius: 20px;
+    padding: 5px 10px;
+    flex-grow: 1;
+    margin: 0 10px;
+}
+
+.search-bar input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    padding: 5px;
+    flex-grow: 1;
+}
+
+.search-bar button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.notifications {
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.container {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: #222;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #444;
+}
+
+.avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #444;
+    margin-right: 10px;
+}
+
+.name {
+    font-weight: bold;
+}
+
+.status {
+    font-size: 12px;
+    color: #aaa;
+}
+
+nav ul {
+    list-style: none;
+    margin-bottom: 20px;
+}
+
+nav li a {
+    display: block;
+    padding: 10px;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    margin-bottom: 5px;
+}
+
+nav li a:hover,
+nav li a.active {
+    background-color: #444;
+}
+
+.chat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.chat-item:hover {
+    background-color: #444;
+}
+
+.chat-info {
+    margin-left: 10px;
+}
+
+.message {
+    font-size: 12px;
+    color: #aaa;
+}
+
+.main-content {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.chat-list-section {
+    width: 300px;
+    background-color: #333;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+.search-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: #444;
+    border-radius: 5px;
+}
+
+.search-header input {
+    flex-grow: 1;
+    padding: 5px;
+    border: none;
+    border-radius: 5px;
+    margin-right: 5px;
+    background-color: #555;
+    color: white;
+}
+
+.search-header button {
+    background-color: #555;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+.chat-items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-area {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #222;
+    padding: 10px;
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background-color: #333;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.chat-title {
+    font-weight: bold;
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+.participants {
+    font-size: 12px;
+    color: #aaa;
+    margin-right: auto;
+}
+
+.options {
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+}
+
+.message-bubble {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.message-content {
+    margin-left: 10px;
+    background-color: #333;
+    padding: 10px;
+    border-radius: 5px;
+    max-width: 70%;
+}
+
+.sender {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.text {
+    font-size: 14px;
+}
+
+.input-area {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background-color: #333;
+    border-radius: 5px;
+}
+
+.input-area input {
+    flex-grow: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: #444;
+    color: white;
+    margin-right: 10px;
+}
+
+.input-area button {
+    background-color: #444;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+    cursor: pointer;
+}
