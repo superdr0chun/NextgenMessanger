@@ -1,7 +1,7 @@
 // src/App.js
 import React from 'react';
 import MainPage from './MainPage'; // Импортируем наш компонент
-import ChatPage from './components/ChatPage';
+import ChatPage from './ChatPage';
 
 function App() {
   return (

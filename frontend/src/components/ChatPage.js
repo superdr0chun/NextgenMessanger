@@ -31,17 +31,6 @@ const ChatPage = () => {
                             <li><a href="#" className="active">Chat</a></li>
                         </ul>
                     </nav>
-                    <div className="chat-list">
-                        {[...Array(8)].map((_, i) => (
-                            <div key={i} className="chat-item">
-                                <div className="avatar"></div>
-                                <div className="chat-info">
-                                    <div className="name">Name Profile</div>
-                                    <div className="message">Message</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
                 </aside>
 
                 {/* Main Content */}
@@ -58,7 +47,7 @@ const ChatPage = () => {
                                     <div className="avatar"></div>
                                     <div className="chat-info">
                                         <div className="name">Name Profile</div>
-                                        <div className="message">Message</div>
+                                        <div className="message">аххахахахахаах</div>
                                     </div>
                                 </div>
                             ))}
@@ -78,7 +67,7 @@ const ChatPage = () => {
                                     <div className="avatar"></div>
                                     <div className="message-content">
                                         <div className="sender">Name Profile</div>
-                                        <div className="text">Message</div>
+                                        <div className="text">ЧМОШНИК</div>
                                     </div>
                                 </div>
                             ))}
