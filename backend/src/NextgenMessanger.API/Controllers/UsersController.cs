@@ -12,10 +12,12 @@ namespace NextgenMessanger.API.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IPostService _postService;
 
-    public UsersController(IUserService userService)
+    public UsersController(IUserService userService, IPostService postService)
     {
         _userService = userService;
+        _postService = postService;
     }
 
     [HttpGet]
@@ -60,6 +62,20 @@ public class UsersController : ControllerBase
         {
             return NotFound();
         }
+    }
+
+    [HttpGet("{id}/posts")]
+    public async Task<IActionResult> GetUserPosts(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        Guid? currentUserId = null;
+        if (userIdClaim != null && Guid.TryParse(userIdClaim, out var userId))
+        {
+            currentUserId = userId;
+        }
+
+        var posts = await _postService.GetUserPostsAsync(id, page, pageSize, currentUserId);
+        return Ok(posts);
     }
 }
 
