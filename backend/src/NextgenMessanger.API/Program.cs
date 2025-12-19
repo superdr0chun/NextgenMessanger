@@ -72,6 +72,8 @@ builder.Services.AddScoped<IPostService, PostService>();
 builder.Services.AddScoped<IReactionService, ReactionService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<IFollowService, FollowService>();
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IChatMessageService, ChatMessageService>();
 
 var app = builder.Build();
 
