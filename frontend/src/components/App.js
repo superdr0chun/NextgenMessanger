@@ -1,15 +1,18 @@
-// src/App.js
+// src/components/App.js
 import React from 'react';
-import MainPage from './MainPage'; // Импортируем наш компонент
-import ChatPage from './components/ChatPage';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import MainPage from './MainPage';    // ← правильный путь
+import ChatPage from './ChatPage';    // ← правильный путь
 
 function App() {
   return (
-    <div className="App">
-      <ChatPage/>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<MainPage />} />
+        <Route path="/chat" element={<ChatPage />} />
+      </Routes>
+    </Router>
   );
 }
-
 
 export default App;
