@@ -22,12 +22,11 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Иконки в хедере */
 .header-icon {
-  width: 28px; /* настройте размер под ваш макет */
+  width: 28px;
   height: auto;
-  cursor: pointer; /* если нужно, чтобы выглядело как кликабельное */
-  margin-left: 8px; /* отступ от поля ввода */
+  cursor: pointer;
+  margin-left: 8px;
 }
 
 .header-left {
@@ -63,54 +62,25 @@
   width: 200px;
 }
 
-.search-button {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  font-size: 16px;
-}
-
 .header-right {
   display: flex;
   align-items: center;
   gap: 15px;
 }
 
-.notification-icon {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  font-size: 20px;
-}
-
-.window-controls {
-  display: flex;
-  gap: 8px;
-}
-
-.control-circle {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-}
-
 /* ОСНОВНОЙ КОНТЕНТ */
 .main-content {
   display: flex;
-  justify-content: center; /* 👈 ЦЕНТРИРУЕМ ПО ГОРИЗОНТАЛИ */
+  justify-content: center;
   flex: 1;
   padding: 20px;
   gap: 20px;
 }
 
-/* ОБЁРТКА ДЛЯ ТРЁХ КОЛОНОК */
 .content-wrapper {
   display: flex;
   gap: 20px;
-  max-width: 1200px; /* 👈 ОГРАНИЧИВАЕМ МАКСИМАЛЬНУЮ ШИРИНУ */
+  max-width: 1200px;
   width: 100%;
 }
 
@@ -142,7 +112,7 @@
   font-weight: bold;
   font-size: 14px;
   color: white;
-  margin-bottom: 2px; /* отступ между именем и ролью */
+  margin-bottom: 2px;
 }
 
 .profile-info .role {
@@ -157,15 +127,24 @@
   margin: 0;
 }
 
-.nav-menu li {
+/* Единый стиль для ВСЕХ пунктов меню */
+.nav-menu-link {
+  display: block;
   padding: 10px 15px;
-  cursor: pointer;
-  border-radius: 20px;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
   transition: background 0.2s;
+  margin-bottom: 8px;
 }
 
-.nav-menu li:hover {
+.nav-menu-link:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+/* Убираем эффект фокуса */
+.nav-menu-link:focus {
+  outline: none;
 }
 
 /* ЦЕНТРАЛЬНАЯ ЧАСТЬ */
@@ -265,4 +244,31 @@
   background: rgba(0, 0, 0, 0.7);
   border-radius: 12px;
   padding: 20px;
+}
+
+/* Ссылка на логотип */
+.logo-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.logo-link, .logo-link img, .logo-link .app-name {
+  color: white;
+}
+
+/* 3D-эффект при наведении на логотип */
+.header-left {
+  cursor: pointer;
+  perspective: 1000px; /* создаёт 3D-пространство */
+}
+
+.header-left .logo {
+  transition: transform 0.6s ease-in-out;
+  transform-style: preserve-3d; /* сохраняет 3D-трансформации */
+}
+
+.header-left:hover .logo {
+  transform: rotateY(360deg);
 }
