@@ -2,6 +2,7 @@
 import React from 'react';
 import MainPage from './MainPage'; // Импортируем наш компонент
 import ChatPage from './ChatPage';
+import ProfilePage from './ProfilePage';
 
 function App() {
   return (

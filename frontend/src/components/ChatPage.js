@@ -1,5 +1,6 @@
 import React from 'react';
 import './ChatPage.css';
+<li><a href="/profile">Profile</a></li>
 
 const ChatPage = () => {
     return (
