@@ -428,3 +428,15 @@
   padding: 0; /* убираем отступы, если были */
   margin: 0;
 }
+
+.profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: white;
+}
+
+.profile-link:hover {
+  opacity: 0.8;
+}

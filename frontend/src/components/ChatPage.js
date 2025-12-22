@@ -57,12 +57,14 @@ const ChatPage = () => {
           {/* Sidebar — без изменений */}
           <aside className="sidebar">
             <div className="user-profile">
-              <div className="avatar"></div>
-              <div>
-                <div className="name">Name Profile</div>
-                <div className="status">3D Designer</div>
-              </div>
-            </div>
+  <a href="/profile" className="profile-link">
+    <div className="avatar"></div>
+    <div>
+      <div className="name">Name Profile</div>
+      <div className="status">3D Designer</div>
+    </div>
+  </a>
+</div>
             <nav className="nav-menu">
               <ul>
                 <li><div className="nav-menu-link">Friends</div></li>
