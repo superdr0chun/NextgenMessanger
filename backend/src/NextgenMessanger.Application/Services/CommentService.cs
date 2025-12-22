@@ -8,10 +8,12 @@ namespace NextgenMessanger.Application.Services;
 public class CommentService : ICommentService
 {
     private readonly ApplicationDbContext _context;
+    private readonly INotificationService _notificationService;
 
-    public CommentService(ApplicationDbContext context)
+    public CommentService(ApplicationDbContext context, INotificationService notificationService)
     {
         _context = context;
+        _notificationService = notificationService;
     }
 
     public async Task<CommentDto> CreateCommentAsync(Guid postId, Guid userId, CreateCommentDto createDto)
@@ -37,6 +39,15 @@ public class CommentService : ICommentService
 
         _context.Comments.Add(comment);
         await _context.SaveChangesAsync();
+
+        // Создать уведомление для автора поста (если это не его собственный комментарий к своему посту)
+        if (post.AuthorId != userId)
+        {
+            await _notificationService.CreateNotificationAsync(
+                post.AuthorId,
+                "new_comment",
+                new { post_id = postId.ToString(), comment_id = comment.Id.ToString(), user_id = userId.ToString() });
+        }
 
         var commentWithAuthor = await _context.Comments
             .Include(c => c.Author)

@@ -8,10 +8,12 @@ namespace NextgenMessanger.Application.Services;
 public class ReactionService : IReactionService
 {
     private readonly ApplicationDbContext _context;
+    private readonly INotificationService _notificationService;
 
-    public ReactionService(ApplicationDbContext context)
+    public ReactionService(ApplicationDbContext context, INotificationService notificationService)
     {
         _context = context;
+        _notificationService = notificationService;
     }
 
     public async Task<ReactionDto> AddReactionAsync(Guid postId, Guid userId, CreateReactionDto createDto)
@@ -64,6 +66,18 @@ public class ReactionService : IReactionService
                 .Include(r => r.User)
                     .ThenInclude(u => u.Profile)
                 .FirstAsync(r => r.Id == reaction.Id);
+
+            // Создать уведомление для автора поста (если это не его собственный пост)
+            var post = await _context.Posts
+                .FirstOrDefaultAsync(p => p.Id == postId && !p.Deleted);
+            
+            if (post != null && post.AuthorId != userId)
+            {
+                await _notificationService.CreateNotificationAsync(
+                    post.AuthorId,
+                    "new_like",
+                    new { post_id = postId.ToString(), user_id = userId.ToString() });
+            }
         }
 
         await _context.SaveChangesAsync();
