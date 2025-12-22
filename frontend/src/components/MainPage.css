@@ -100,6 +100,13 @@
   gap: 10px;
   margin-bottom: 30px;
 }
+.profile-link .avatar
+{
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: white;
+}
 
 .avatar {
   width: 40px;
@@ -272,3 +279,16 @@
 .header-left:hover .logo {
   transform: rotateY(360deg);
 }
+
+.profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: white;
+}
+
+.profile-link:hover {
+  opacity: 0.8;
+}
+

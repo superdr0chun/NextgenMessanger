@@ -1,8 +1,9 @@
-// src/components/App.js
+// src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import MainPage from './MainPage';    // ← правильный путь
-import ChatPage from './ChatPage';    // ← правильный путь
+import MainPage from './MainPage';
+import ChatPage from './ChatPage';
+import ProfilePage from './ProfilePage';
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/chat" element={<ChatPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Routes>
     </Router>
   );

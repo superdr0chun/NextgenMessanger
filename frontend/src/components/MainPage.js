@@ -28,13 +28,15 @@ function MainPage() {
         <div className="content-wrapper">
           {/* ЛЕВОЕ МЕНЮ */}
           <aside className="sidebar">
-            <div className="profile">
+            {/* 👇 ИСПРАВЛЕНО: убран .user-profile */}
+            <a href="/profile" className="profile-link">
               <div className="avatar"></div>
               <div className="profile-info">
-                <div className="name">Name Profile</div>
-                <div className="role">3d Designer</div>
+                <span className="name">Name Profile</span>
+                <span className="role">3d Designer</span>
               </div>
-            </div>
+            </a>
+
             <nav className="nav-menu">
               <ul>
                 <li><Link to="#" className="nav-menu-link">Friends</Link></li>
