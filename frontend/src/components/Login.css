@@ -16,6 +16,9 @@
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
+  /* Центрирование контейнера на странице */
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .login-box {

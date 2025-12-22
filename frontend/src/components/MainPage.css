@@ -35,9 +35,31 @@
   gap: 10px;
 }
 
+.logo-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: white;
+  cursor: pointer;
+  perspective: 1000px;
+}
+
+.logo-link img,
+.logo-link .app-name {
+  color: white;
+}
+
 .logo {
   width: 30px;
-  height: auto;
+  height: 30px;
+  object-fit: contain;
+  transition: transform 0.6s ease-in-out;
+  transform-style: preserve-3d;
+}
+
+.logo-link:hover .logo {
+  transform: rotateY(360deg);
 }
 
 .app-name {
@@ -246,29 +268,3 @@
   padding: 20px;
 }
 
-/* Ссылка на логотип */
-.logo-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-}
-
-.logo-link, .logo-link img, .logo-link .app-name {
-  color: white;
-}
-
-/* 3D-эффект при наведении на логотип */
-.header-left {
-  cursor: pointer;
-  perspective: 1000px; /* создаёт 3D-пространство */
-}
-
-.header-left .logo {
-  transition: transform 0.6s ease-in-out;
-  transform-style: preserve-3d; /* сохраняет 3D-трансформации */
-}
-
-.header-left:hover .logo {
-  transform: rotateY(360deg);
-}

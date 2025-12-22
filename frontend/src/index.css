@@ -15,14 +15,8 @@ body {
 }
 
 #root {
-  width: 100vw;
+  width: 100%;
   min-height: 100vh;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  overflow-x: auto;
-  overflow-y: auto;
-  background: #f0f0f0;
   padding: 0;
   margin: 0;
 }
