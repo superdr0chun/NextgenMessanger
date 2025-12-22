@@ -95,13 +95,20 @@ public class PostService : IPostService
         };
     }
 
-    public async Task<IEnumerable<PostDto>> GetPostsAsync(int page = 1, int pageSize = 20, Guid? currentUserId = null)
+    public async Task<IEnumerable<PostDto>> GetPostsAsync(int page = 1, int pageSize = 20, Guid? currentUserId = null, string? searchQuery = null)
     {
         var postsQuery = _context.Posts
             .Include(p => p.Author)
                 .ThenInclude(u => u.Profile)
-            .Where(p => !p.Deleted && p.Visibility == "public")
-            .OrderByDescending(p => p.CreatedAt);
+            .Where(p => !p.Deleted && p.Visibility == "public");
+
+        // Поиск по тексту поста, если указан запрос
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            postsQuery = postsQuery.Where(p => p.Content != null && p.Content.Contains(searchQuery));
+        }
+
+        postsQuery = postsQuery.OrderByDescending(p => p.CreatedAt);
 
         var posts = await postsQuery
             .Skip((page - 1) * pageSize)

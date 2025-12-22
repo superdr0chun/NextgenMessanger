@@ -39,7 +39,7 @@ public class PostsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetPosts([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<IActionResult> GetPosts([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? q = null)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         Guid? currentUserId = null;
@@ -48,7 +48,7 @@ public class PostsController : ControllerBase
             currentUserId = userId;
         }
 
-        var posts = await _postService.GetPostsAsync(page, pageSize, currentUserId);
+        var posts = await _postService.GetPostsAsync(page, pageSize, currentUserId, q);
         return Ok(posts);
     }
 

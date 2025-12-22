@@ -8,10 +8,12 @@ namespace NextgenMessanger.Application.Services;
 public class FollowService : IFollowService
 {
     private readonly ApplicationDbContext _context;
+    private readonly INotificationService _notificationService;
 
-    public FollowService(ApplicationDbContext context)
+    public FollowService(ApplicationDbContext context, INotificationService notificationService)
     {
         _context = context;
+        _notificationService = notificationService;
     }
 
     public async Task<FollowDto> FollowUserAsync(Guid followerId, Guid followeeId)
@@ -58,6 +60,12 @@ public class FollowService : IFollowService
                 existingFollow.DeletedAt = null;
                 existingFollow.Status = "accepted";
                 existingFollow.UpdatedAt = DateTime.UtcNow;
+
+                // Если подписка была удалена и теперь восстанавливается, создать уведомление
+                await _notificationService.CreateNotificationAsync(
+                    followeeId,
+                    "new_follower",
+                    new { follower_id = followerId.ToString() });
             }
         }
         else
@@ -82,6 +90,12 @@ public class FollowService : IFollowService
                 .Include(f => f.Followee)
                     .ThenInclude(u => u.Profile)
                 .FirstAsync(f => f.Id == follow.Id);
+
+            // Создать уведомление для пользователя, на которого подписались
+            await _notificationService.CreateNotificationAsync(
+                followeeId,
+                "new_follower",
+                new { follower_id = followerId.ToString() });
         }
 
         await _context.SaveChangesAsync();

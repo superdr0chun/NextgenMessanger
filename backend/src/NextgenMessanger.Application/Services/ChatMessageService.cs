@@ -8,10 +8,12 @@ namespace NextgenMessanger.Application.Services;
 public class ChatMessageService : IChatMessageService
 {
     private readonly ApplicationDbContext _context;
+    private readonly INotificationService _notificationService;
 
-    public ChatMessageService(ApplicationDbContext context)
+    public ChatMessageService(ApplicationDbContext context, INotificationService notificationService)
     {
         _context = context;
+        _notificationService = notificationService;
     }
 
     public async Task<MessageDto> SendMessageAsync(Guid chatId, Guid userId, CreateMessageDto createDto)
@@ -51,6 +53,23 @@ public class ChatMessageService : IChatMessageService
         }
 
         await _context.SaveChangesAsync();
+
+        // Создать уведомления для всех участников чата (кроме отправителя)
+        var participants = await _context.ChatParticipants
+            .Where(cp => cp.ChatId == chatId 
+                && cp.UserId != userId 
+                && !cp.Deleted 
+                && cp.LeftAt == null)
+            .Select(cp => cp.UserId)
+            .ToListAsync();
+
+        foreach (var participantId in participants)
+        {
+            await _notificationService.CreateNotificationAsync(
+                participantId,
+                "new_message",
+                new { chat_id = chatId.ToString(), sender_id = userId.ToString(), message_id = message.Id.ToString() });
+        }
 
         var messageWithSender = await _context.ChatMessages
             .Include(m => m.Sender)
