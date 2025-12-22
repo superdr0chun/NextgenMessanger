@@ -12,23 +12,23 @@ function Login() {
         <h2>LOGIN</h2>
         
         <div className="input-group">
-          <span className="icon">■</span>
+          <span className="icon">✉</span>
           <input type="email" placeholder="Email" />
         </div>
 
         <div className="input-group">
-          <span className="icon">■</span>
-          <input type="password" placeholder="Password" />
+          <span className="icon">🔒</span>
+          <input type="password" placeholder="Passwod" />
         </div>
 
         <div className="button-group">
           <button className="btn primary">Войти</button>
-          <button className="btn secondary">Зарегистрироваться</button>
+          <button className="btn secondary">Создать аккаунт</button>
         </div>
 
         <div className="forgot-password">
           <button type="button" className="forgot-password-button">
-            Забыли пароль?
+            Forgot your password?
           </button>
         </div>
       </div>
