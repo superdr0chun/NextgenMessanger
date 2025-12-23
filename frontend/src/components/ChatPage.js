@@ -18,7 +18,6 @@ const ChatPage = () => {
     { id: 8, name: 'Anna Smith', lastMessage: 'Meeting at 5 PM' },
   ];
 
-  // Фильтрация чатов
   const filteredChats = mockChats.filter(chat =>
     chat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -27,13 +26,9 @@ const ChatPage = () => {
     setActiveChat(chat);
   };
 
-  const closeChat = () => {
-    setActiveChat(null);
-  };
-
   return (
     <div className="chat-page">
-      {/* HEADER — С ССЫЛКОЙ НА ГЛАВНУЮ */}
+      {/* HEADER */}
       <header className="header">
         <div className="header-left">
           <Link to="/" className="logo-link">
@@ -51,20 +46,20 @@ const ChatPage = () => {
       </header>
 
       {/* Main Container */}
-      <div className={`container ${activeChat ? 'chat-open' : ''}`}>
-        {/* Sidebar + Chat List — обёртка для сдвига */}
+      <div className="container">
+        {/* Sidebar + Chat List */}
         <div className="left-content">
-          {/* Sidebar — без изменений */}
+          {/* Sidebar */}
           <aside className="sidebar">
             <div className="user-profile">
-  <a href="/profile" className="profile-link">
-    <div className="avatar"></div>
-    <div>
-      <div className="name">Name Profile</div>
-      <div className="status">3D Designer</div>
-    </div>
-  </a>
-</div>
+              <a href="/profile" className="profile-link">
+                <div className="avatar"></div>
+                <div>
+                  <div className="name">Name Profile</div>
+                  <div className="status">3D Designer</div>
+                </div>
+              </a>
+            </div>
             <nav className="nav-menu">
               <ul>
                 <li><div className="nav-menu-link">Friends</div></li>
@@ -75,7 +70,7 @@ const ChatPage = () => {
             </nav>
           </aside>
 
-          {/* Chat List — с поиском */}
+          {/* Chat List */}
           <main className="chat-list-section">
             <div className="search-header">
               <input
@@ -109,11 +104,11 @@ const ChatPage = () => {
           </main>
         </div>
 
-        {/* Chat Area */}
-        {activeChat && (
+        {/* Placeholder или чат */}
+        {activeChat ? (
           <section className="chat-area">
             <div className="chat-area-header">
-              <div className="close-button" onClick={closeChat}>✕</div>
+              {/* ✅ Кнопка закрытия УДАЛЕНА */}
               <div className="chat-title">{activeChat.name}</div>
               <div className="participants">3 participants</div>
               <div className="options">⋯</div>
@@ -130,8 +125,17 @@ const ChatPage = () => {
               ))}
             </div>
             <div className="input-area">
+              <button className="emoji-button">😊</button>
               <input type="text" placeholder="Text a message..." />
-              <button>📎</button>
+              <button className="attach-button">📎</button>
+            </div>
+          </section>
+        ) : (
+          <section className="chat-placeholder">
+            <div className="placeholder-content">
+              <div className="placeholder-icon">💬</div>
+              <h2>Выберите чат</h2>
+              <p>Начните общение, выбрав один из чатов слева</p>
             </div>
           </section>
         )}
