@@ -4,32 +4,39 @@ import './Login.css';
 
 function Login() {
   return (
-    <div className="login-container">
-      {/* 👇 Логотип ВНЕ блока формы, но внутри общего контейнера */}
-      <img src="/LogoNG.png" alt="Logo" className="logo" />
-      
-      <div className="login-box">
-        <h2>LOGIN</h2>
-        
-        <div className="input-group">
-          <span className="icon">■</span>
-          <input type="email" placeholder="Email" />
-        </div>
+    <div className="login-page-wrapper">
+      <div className="login-container">
+        <div className="login-box">
+          <h2 className="login-title">АВТОРИЗАЦИЯ</h2>
+          
+          <div className="login-input-group">
+            <span className="login-icon">✉</span>
+            <input 
+              type="email" 
+              placeholder="Email" 
+              className="login-input"
+            />
+          </div>
 
-        <div className="input-group">
-          <span className="icon">■</span>
-          <input type="password" placeholder="Password" />
-        </div>
+          <div className="login-input-group">
+            <span className="login-icon">🔒</span>
+            <input 
+              type="password" 
+              placeholder="Passwod" 
+              className="login-input"
+            />
+          </div>
 
-        <div className="button-group">
-          <button className="btn primary">Войти</button>
-          <button className="btn secondary">Зарегистрироваться</button>
-        </div>
+          <div className="login-button-group">
+            <button className="login-btn login-btn-primary">Войти</button>
+            <button className="login-btn login-btn-secondary">Создать аккаунт</button>
+          </div>
 
-        <div className="forgot-password">
-          <button type="button" className="forgot-password-button">
-            Забыли пароль?
-          </button>
+          <div className="login-forgot-password">
+            <button type="button" className="login-forgot-password-button">
+              Forgot your password?
+            </button>
+          </div>
         </div>
       </div>
     </div>

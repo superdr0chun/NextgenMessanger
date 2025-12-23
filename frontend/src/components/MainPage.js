@@ -11,7 +11,7 @@ function MainPage() {
         <div className="header-left">
           <Link to="/" className="logo-link">
             <img src="/LogoNGhead.png" alt="NextGen Logo" className="logo" />
-            <span className="app-name">NextGen</span>
+            <span className="app-name">Nextgen</span>
           </Link>
         </div>
         <div className="header-center">
