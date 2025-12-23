@@ -75,6 +75,7 @@
   flex: 1;
   padding: 20px;
   gap: 20px;
+  position: relative; /* Для абсолютного позиционирования sidebar */
 }
 
 .content-wrapper {
@@ -82,9 +83,10 @@
   gap: 20px;
   max-width: 1200px;
   width: 100%;
+  position: relative;
 }
 
-/* ЛЕВОЕ МЕНЮ - параметры согласно макету */
+/* ЛЕВОЕ МЕНЮ - отдельный элемент с абсолютным позиционированием */
 .sidebar {
   width: 247px;
   height: 925px;
@@ -93,8 +95,10 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  position: relative;
-  top: 125px;
+  position: absolute;
+  left: 20px; /* Отступ от левого края main-content */
+  top: 125px; /* Позиция сверху согласно макету */
+  z-index: 1; /* Поверх других элементов */
 }
 
 .profile {
