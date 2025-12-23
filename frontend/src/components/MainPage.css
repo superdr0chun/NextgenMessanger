@@ -84,14 +84,17 @@
   width: 100%;
 }
 
-/* ЛЕВОЕ МЕНЮ */
+/* ЛЕВОЕ МЕНЮ - параметры согласно макету */
 .sidebar {
-  width: 220px;
-  background: rgba(0, 0, 0, 0.7);
-  border-radius: 12px;
+  width: 247px;
+  height: 925px;
+  background: linear-gradient(180deg, #282728, #282728);
+  border-radius: 21px;
   padding: 20px;
   display: flex;
   flex-direction: column;
+  position: relative;
+  top: 125px;
 }
 
 .profile {
