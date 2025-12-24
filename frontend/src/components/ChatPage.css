@@ -1,161 +1,27 @@
 /* src/components/ChatPage.css */
 
 .chat-page {
-  font-family: 'Segoe UI', Roboto, sans-serif;
-  background: #2D2D2D;
-  color: white;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* HEADER — ТОЧНО КАК В MAINPAGE */
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 12px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.header-icon {
-  width: 24px;
-  height: auto;
-  cursor: pointer;
-  margin-left: 8px;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.logo {
-  width: 28px;
-  height: auto;
-}
-
-.app-name {
-  font-size: 18px;
-  font-weight: 500;
-}
-
-.header-center {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.search-input {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 14px;
-  outline: none;
-  width: 240px;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-/* ОСНОВНОЙ КОНТЕНТ */
-.container {
-  display: flex;
-  flex-grow: 1;
-  overflow: hidden;
-  padding: 16px;
-  gap: 16px;
-  max-width: 1400px;
-  margin: 0 auto;
   width: 100%;
-}
-
-.left-content {
-  display: flex;
-  gap: 16px;
-}
-
-.sidebar {
-  width: 200px;
-  background: #222;
-  padding: 20px;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 90px); /* header + padding */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-
-.user-profile {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-  gap: 12px;
-}
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #444;
-}
-
-.name {
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.status {
-  font-size: 12px;
-  color: #aaa;
-}
-
-/* МЕНЮ */
-.nav-menu ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  flex-grow: 1;
-}
-
-.nav-menu-link {
-  display: block;
-  padding: 10px 15px;
-  color: white;
-  text-decoration: none;
-  border-radius: 6px;
-  transition: background 0.2s;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.nav-menu-link:hover,
-.nav-menu-link.active {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.nav-menu-link:focus {
-  outline: none;
+  min-height: 100vh;
+  background: linear-gradient(360deg, rgba(217, 217, 217, 0.2) 0%, rgba(162, 163, 163, 0.8) 50%, #282728 100%);
+  position: relative;
 }
 
 /* ЧАТ-ЛИСТ */
 .chat-list-section {
+  position: absolute;
+  left: 0;
+  margin-left: 517px;
+  margin-top: 100px;
   width: 300px;
-  background: #333;
+  background: #282728;
   padding: 16px;
-  border-radius: 12px;
+  border-radius: 21px;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 120px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  height: calc(100vh - 100px - 84px);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .search-header {
@@ -213,6 +79,14 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+.chat-item .avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #444;
+  flex-shrink: 0;
+}
+
 .chat-info {
   margin-left: 12px;
   flex-grow: 1;
@@ -221,25 +95,30 @@
 .chat-info .name {
   font-weight: 600;
   font-size: 14px;
+  color: #F5F5F5;
 }
 
 .chat-info .message {
   font-size: 13px;
-  color: #aaa;
+  color: rgba(245, 245, 245, 0.6);
 }
 
 /* ЧАТ-ОБЛАСТЬ */
 .chat-area {
-  width: 600px;
-  background: #333;
-  border-radius: 12px;
+  position: absolute;
+  left: 0;
+  margin-left: 820px;
+  margin-top: 100px;
+  width: 900px;
+  background: #282728;
+  border-radius: 21px;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 120px);
+  height: calc(100vh - 100px - 84px);
   opacity: 1;
   transform: translateX(0);
-  position: relative;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .chat-area-header {
@@ -247,7 +126,7 @@
   align-items: center;
   padding: 12px 16px;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px 12px 0 0;
+  border-radius: 21px 21px 0 0;
   position: relative;
 }
 
@@ -276,6 +155,7 @@
   font-size: 16px;
   margin-right: auto;
   margin-left: 30px;
+  color: #FFFFFF;
 }
 
 .participants {
@@ -306,6 +186,14 @@
   gap: 12px;
 }
 
+.message-bubble .avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #444;
+  flex-shrink: 0;
+}
+
 .message-content {
   background: rgba(255, 255, 255, 0.08);
   padding: 12px;
@@ -314,9 +202,7 @@
 }
 
 .sender {
-  font-weight: 600;
-  font-size: 13px;
-  margin-bottom: 4px;
+  display: none;
 }
 
 .text {
@@ -330,7 +216,7 @@
   align-items: center;
   padding: 12px 16px;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 0 0 12px 12px;
+  border-radius: 0 0 21px 21px;
   gap: 8px; /* уменьшаем отступ между элементами */
 }
 
@@ -473,14 +359,18 @@
 
 /* === ПОДСКАЗКА ПО ЦЕНТРУ === */
 .chat-placeholder {
-  width: 600px;
-  background: #333;
-  border-radius: 12px;
+  position: absolute;
+  left: 0;
+  margin-left: 820px;
+  margin-top: 100px;
+  width: 900px;
+  background: #282728;
+  border-radius: 21px;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: calc(100vh - 120px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  height: calc(100vh - 100px - 84px);
+  box-sizing: border-box;
 }
 
 .placeholder-content {

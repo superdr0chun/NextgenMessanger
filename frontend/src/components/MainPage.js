@@ -1,83 +1,104 @@
-// src/components/MainPage.js
 import React from 'react';
-import './MainPage.css';
 import { Link } from 'react-router-dom';
+import './MainPage.css';
 
 function MainPage() {
   return (
-    <div className="main-container">
-      {/* ШАПКА */}
-      <header className="header">
-        <div className="header-left">
-          <Link to="/" className="logo-link">
-            <img src="/LogoNGhead.png" alt="NextGen Logo" className="logo" />
-            <span className="app-name">Nextgen</span>
-          </Link>
+    <div className="main-page">
+      <header className="main-header">
+        <div className="header-logo">
+          <img src="/LogoNGhead.png" alt="NextGen Logo" className="logo-img" />
+          <span className="logo-text">Nextgen</span>
         </div>
-        <div className="header-center">
-          <input type="text" placeholder="Search" className="search-input" />
-          <img src="/find.png" alt="Search" className="header-icon" />
+        
+        <div className="header-search">
+          <input type="text" placeholder="Найти" className="header-search-input" />
+          <img src="/search-alt.png" alt="Search" className="header-search-icon" />
         </div>
-        <div className="header-right">
-          <img src="/notification.png" alt="Notifications" className="header-icon" />
-        </div>
+        
+        <img src="/notifications.png" alt="Notifications" className="header-notifications-icon" />
       </header>
-
-      {/* ОСНОВНОЙ КОНТЕНТ */}
-      <div className="main-content">
-        <div className="content-wrapper">
-          {/* ЛЕВОЕ МЕНЮ */}
-          <aside className="sidebar">
-            {/* 👇 ИСПРАВЛЕНО: убран .user-profile */}
-            <a href="/profile" className="profile-link">
-              <div className="avatar"></div>
-              <div className="profile-info">
-                <span className="name">Name Profile</span>
-                <span className="role">3d Designer</span>
-              </div>
-            </a>
-
-            <nav className="nav-menu">
-              <ul>
-                <li><Link to="#" className="nav-menu-link">Friends</Link></li>
-                <li><Link to="#" className="nav-menu-link">Music</Link></li>
-                <li><Link to="#" className="nav-menu-link">News Feed</Link></li>
-                <li><Link to="/chat" className="nav-menu-link">Chat</Link></li>
-              </ul>
-            </nav>
-          </aside>
-
-          {/* ЦЕНТРАЛЬНАЯ ЧАСТЬ */}
-          <main className="central-content">
-            <div className="stories">
-              <div className="story-item">Stories</div>
-              <div className="story-item">Stories</div>
-              <div className="story-item">Stories</div>
-              <div className="story-item">Stories</div>
-              <div className="story-item new-story">+</div>
-            </div>
-
-            <div className="search-bar">
-              <input type="text" placeholder="Search" className="search-input" />
-              <img src="/find.png" alt="Search" className="header-icon" />
-            </div>
-
-            <div className="tabs">
-              <button className="tab active">Main</button>
-              <button className="tab">Popular</button>
-              <button className="tab">Music</button>
-              <button className="tab">Photo</button>
-            </div>
-
-            <div className="content-card"></div>
-            <div className="content-card"></div>
-          </main>
-
-          <aside className="right-panel"></aside>
+      
+      <aside className="main-sidebar">
+        <div className="sidebar-profile">
+          <img src="/images/authimage.png" alt="Avatar" className="sidebar-avatar" />
+          <div className="sidebar-profile-info">
+            <div className="sidebar-profile-name">Марина Лазарева</div>
+            <div className="sidebar-profile-role">3d Designer</div>
+          </div>
         </div>
-      </div>
+        
+        <nav className="sidebar-nav">
+          <div className="sidebar-nav-link">Друзья</div>
+          <div className="sidebar-nav-link">Музыка</div>
+          <div className="sidebar-nav-link active">Лента</div>
+          <Link to="/chat" className="sidebar-nav-link">Сообщения</Link>
+        </nav>
+      </aside>
+      
+      <section className="recent-chats-section">
+        <div className="recent-chats-container">
+          <div className="recent-chat-item">
+            <div className="recent-chat-avatar"></div>
+            <div className="recent-chat-name">Chat 1</div>
+          </div>
+          <div className="recent-chat-item">
+            <div className="recent-chat-avatar"></div>
+            <div className="recent-chat-name">Chat 2</div>
+          </div>
+          <div className="recent-chat-item">
+            <div className="recent-chat-avatar"></div>
+            <div className="recent-chat-name">Chat 3</div>
+          </div>
+        </div>
+      </section>
+      
+      <section className="posts-feed">
+        <div className="posts-container">
+          <div className="post-card">
+            <div className="post-header">
+              <img src="/images/authimage.png" alt="User Avatar" className="post-avatar" />
+              <div className="post-author-name">Имя Фамилия</div>
+            </div>
+            <div className="post-content">
+              <img src="/postimage.png" alt="Post" className="post-image" />
+              <div className="post-text">
+                Новый мерч от Nextgen уже в продаже! Вырази свой стиль и покажи свою принадлежность к современной молодёжи. Специальные дизайны и качество — делай свой образ ярким и уникальным!
+              </div>
+            </div>
+            <div className="post-actions">
+              <img src="/like.png" alt="Like" className="post-action-icon" />
+              <img src="/comment.png" alt="Comment" className="post-action-icon" />
+              <img src="/important.png" alt="Bookmark" className="post-action-icon" />
+            </div>
+          </div>
+          
+          <div className="post-card">
+            <div className="post-header">
+              <img src="/images/authimage.png" alt="User Avatar" className="post-avatar" />
+              <div className="post-author-name">Имя Фамилия</div>
+            </div>
+            <div className="post-content">
+              <img src="/postimage.png" alt="Post" className="post-image" />
+              <div className="post-text">
+                Новый мерч от Nextgen уже в продаже! Вырази свой стиль и покажи свою принадлежность к современной молодёжи. Специальные дизайны и качество — делай свой образ ярким и уникальным!
+              </div>
+            </div>
+            <div className="post-actions">
+              <img src="/like.png" alt="Like" className="post-action-icon" />
+              <img src="/comment.png" alt="Comment" className="post-action-icon" />
+              <img src="/important.png" alt="Bookmark" className="post-action-icon" />
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <aside className="main-content-block">
+        {/* Контент будет добавлен позже */}
+      </aside>
     </div>
   );
 }
 
 export default MainPage;
+

@@ -1,313 +1,314 @@
-/* src/MainPage.css */
-
-.main-container {
-  display: flex;
-  flex-direction: column;
+.main-page {
+  width: 100%;
   min-height: 100vh;
-  /* Градиент согласно макету: Linear Gradient темный сверху, светлый снизу */
-  background: linear-gradient(to bottom, #A2A3A3 20%, #D9D9D9 80%);
-  background-attachment: fixed;
-  color: white;
-  padding: 0;
-  margin: 0;
+  background: linear-gradient(360deg, rgba(217, 217, 217, 0.2) 0%, rgba(162, 163, 163, 0.8) 50%, #282728 100%);
+}
+
+.main-header {
+  width: 100%;
+  height: 84px;
+  background: #6e6f70;
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0 33px;
 }
 
-/* ШАПКА */
-.header {
+.header-search {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
   background: rgba(255, 255, 255, 0.1);
-  padding: 20px 20px;
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.header-icon {
-  width: 28px;
-  height: auto;
-  cursor: pointer;
-  margin-left: 8px;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.logo {
-  width: 30px;
-  height: auto;
-}
-
-.app-name {
-  font-size: 22px;
-  font-weight: 500;
-}
-
-.header-center {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.search-input {
+  border-radius: 10px;
   padding: 8px 12px;
+  position: absolute;
+  left: 590px;
+}
+
+.header-search-input {
   border: none;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background: transparent;
+  color: #F8FAFA;
   font-size: 14px;
   outline: none;
   width: 200px;
 }
 
-.header-right {
+.header-search-input::placeholder {
+  color: rgba(248, 250, 250, 0.6);
+}
+
+.header-search-icon {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  opacity: 0.6;
+  filter: brightness(0) invert(1);
+}
+
+.header-notifications-icon {
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  filter: brightness(0) invert(1);
+  position: absolute;
+  left: 876px;
+}
+
+.header-logo {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
+  margin-left: 217px;
+  margin-right: 82px;
 }
 
-/* ОСНОВНОЙ КОНТЕНТ */
-.main-content {
-  display: flex;
-  justify-content: center;
-  flex: 1;
-  padding: 20px;
-  gap: 20px;
-  position: relative;
+.logo-img {
+  height: 56px;
+  width: auto;
 }
 
-.content-wrapper {
-  display: flex;
-  gap: 20px;
-  max-width: 1200px;
-  width: 100%;
-  position: relative;
-  /* Отступ слева для sidebar (247px + gap) */
-  margin-left: 267px;
+.logo-text {
+  font-size: 24px;
+  font-weight: 500;
+  color: #F8FAFA;
 }
 
-/* ЛЕВОЕ МЕНЮ - параметры согласно макету (Rectangle 39) */
-.sidebar {
-  /* Layout */
+.main-sidebar {
   width: 247px;
-  height: 925px;
+  height: calc(100vh - 100px - 84px);
+  margin-top: 100px;
+  margin-left: 250px;
   border-radius: 21px;
-  
-  /* Colors - Linear Gradient с #282728 */
-  background: #282728; /* Solid color, так как градиент от одного цвета к тому же */
-  
-  /* Positioning - относительно .main-container (вся страница) */
-  position: fixed;
-  left: 0; /* Прилипает к левому краю страницы */
-  top: 125px; /* Отступ сверху согласно макету */
-  z-index: 1;
-  
-  /* Content */
-  padding: 20px;
+  background: #282728;
+  position: absolute;
+  left: 0;
+  padding: 20px 20px 20px 20px;
+  box-sizing: border-box;
+}
+
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-left: 0;
+}
+
+.sidebar-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.sidebar-profile-info {
   display: flex;
   flex-direction: column;
 }
 
-.profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 30px;
-}
-.profile-link .avatar
-{
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: white;
+.sidebar-profile-name {
+  font-size: 16px;
+  font-weight: 400;
+  color: #F5F5F5;
+  line-height: 100%;
 }
 
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: white;
-}
-
-.profile-info .name {
-  font-weight: bold;
+.sidebar-profile-role {
   font-size: 14px;
-  color: white;
-  margin-bottom: 2px;
+  color: rgba(245, 245, 245, 0.6);
+  margin-top: 4px;
 }
 
-.profile-info .role {
-  font-size: 12px;
-  color: #ccc;
-  font-weight: normal;
-}
-
-.nav-menu ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-/* Единый стиль для ВСЕХ пунктов меню */
-.nav-menu-link {
-  display: block;
-  padding: 10px 15px;
-  color: white;
-  text-decoration: none;
-  border-radius: 6px;
-  transition: background 0.2s;
-  margin-bottom: 8px;
-}
-
-.nav-menu-link:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* Убираем эффект фокуса */
-.nav-menu-link:focus {
-  outline: none;
-}
-
-/* ЦЕНТРАЛЬНАЯ ЧАСТЬ */
-.central-content {
-  flex: 1;
-  max-width: 600px;
-  min-width: 0; /* Для правильной работы flex */
-}
-
-.stories {
+.sidebar-nav {
+  margin-top: 30px;
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 29px;
+  padding-left: 0;
 }
 
-.story-item {
+.sidebar-nav-link {
+  font-size: 20px;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  padding: 8px 0;
+  transition: color 0.2s;
+  text-decoration: none;
+  display: block;
+}
+
+.sidebar-nav-link:hover {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.sidebar-nav-link.active {
+  color: #FFFFFF;
+}
+
+.recent-chats-section {
+  position: absolute;
+  top: 182px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 500px);
+  max-width: 600px;
+}
+
+.recent-chats-container {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0;
+}
+
+.recent-chats-container::-webkit-scrollbar {
+  height: 4px;
+}
+
+.recent-chats-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.recent-chats-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.recent-chat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 75px;
+  cursor: pointer;
+}
+
+.recent-chat-avatar {
   width: 70px;
   height: 70px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: #282728;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.recent-chat-name {
   font-size: 12px;
-  color: white;
-  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.37);
-}
-
-.story-item.new-story {
-  background: rgba(255, 255, 255, 0.3);
-  font-size: 20px;
-  font-weight: bold;
-}
-
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 20px;
-}
-
-.search-bar .search-input {
-  width: 100%;
-  padding: 10px 15px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: none;
-  outline: none;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.37);
-}
-
-.tabs {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.tab {
-  background: none;
-  border: none;
   color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  padding: 10px 0;
-  font-size: 14px;
-  position: relative;
+  text-align: center;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.tab.active {
-  color: white;
-  font-weight: bold;
-}
-
-.tab.active::after {
-  content: '';
+.posts-feed {
   position: absolute;
-  bottom: -1px;
-  left: 0;
+  top: 300px;
+  bottom: 10px;
+  left: 497px;
+  right: 575px;
+  overflow-y: auto;
+}
+
+.posts-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 0;
+}
+
+.post-card {
+  width: 661px;
+  min-height: 597px;
+  background: #464646;
+  border-radius: 21px;
+  padding: 20px;
+  box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  margin-top: 20px;
+}
+
+.post-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.post-author-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #FFFFFF;
+}
+
+.post-content {
+  margin-top: 16px;
+}
+
+.post-image {
   width: 100%;
-  height: 2px;
-  background: white;
-}
-
-.content-card {
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.37);
+  height: auto;
   border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 20px;
-  min-height: 200px;
+  object-fit: cover;
 }
 
-/* ПРАВАЯ ПАНЕЛЬ */
-.right-panel {
-  width: 250px;
-  background: rgba(0, 0, 0, 0.7);
-  border-radius: 12px;
-  padding: 20px;
+.post-text {
+  margin-top: 16px;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #FFFFFF;
 }
 
-/* Ссылка на логотип */
-.logo-link {
+.post-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  text-decoration: none;
+  gap: 24px;
+  margin-top: 16px;
 }
 
-.logo-link, .logo-link img, .logo-link .app-name {
-  color: white;
-}
-
-/* 3D-эффект при наведении на логотип */
-.header-left {
+.post-action-icon {
+  width: 24px;
+  height: 24px;
   cursor: pointer;
-  perspective: 1000px; /* создаёт 3D-пространство */
+  transition: opacity 0.2s;
+  filter: brightness(0) invert(1);
 }
 
-.header-left .logo {
-  transition: transform 0.6s ease-in-out;
-  transform-style: preserve-3d; /* сохраняет 3D-трансформации */
+.post-action-icon:hover {
+  opacity: 0.7;
 }
 
-.header-left:hover .logo {
-  transform: rotateY(360deg);
+.posts-feed::-webkit-scrollbar {
+  width: 4px;
 }
 
-.profile-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-  color: white;
+.posts-feed::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.profile-link:hover {
-  opacity: 0.8;
+.posts-feed::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.main-content-block {
+  width: 325px;
+  height: calc(100vh - 100px - 84px);
+  margin-top: 100px;
+  margin-right: 250px;
+  border-radius: 21px;
+  background: #282728;
+  position: absolute;
+  right: 0;
 }
 
