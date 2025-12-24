@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import './ChatPage.css';
 import { Link } from 'react-router-dom';
+import './MainPage.css';
 
 const ChatPage = () => {
   const [activeChat, setActiveChat] = useState(null);
@@ -28,50 +29,43 @@ const ChatPage = () => {
 
   return (
     <div className="chat-page">
-      {/* HEADER */}
-      <header className="header">
-        <div className="header-left">
-          <Link to="/" className="logo-link">
-            <img src="/LogoNGhead.png" alt="NextGen Logo" className="logo" />
-            <span className="app-name">Nextgen</span>
+      {/* HEADER - как в MainPage */}
+      <header className="main-header">
+        <div className="header-logo">
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+            <img src="/LogoNGhead.png" alt="NextGen Logo" className="logo-img" />
+            <span className="logo-text">Nextgen</span>
           </Link>
         </div>
-        <div className="header-center">
-          <input type="text" placeholder="Search" className="search-input" />
-          <img src="/find.png" alt="Search" className="header-icon" />
+        
+        <div className="header-search">
+          <input type="text" placeholder="Найти" className="header-search-input" />
+          <img src="/search-alt.png" alt="Search" className="header-search-icon" />
         </div>
-        <div className="header-right">
-          <img src="/notification.png" alt="Notifications" className="header-icon" />
-        </div>
+        
+        <img src="/notifications.png" alt="Notifications" className="header-notifications-icon" />
       </header>
 
-      {/* Main Container */}
-      <div className="container">
-        {/* Sidebar + Chat List */}
-        <div className="left-content">
-          {/* Sidebar */}
-          <aside className="sidebar">
-            <div className="user-profile">
-              <a href="/profile" className="profile-link">
-                <div className="avatar"></div>
-                <div>
-                  <div className="name">Name Profile</div>
-                  <div className="status">3D Designer</div>
-                </div>
-              </a>
-            </div>
-            <nav className="nav-menu">
-              <ul>
-                <li><div className="nav-menu-link">Friends</div></li>
-                <li><div className="nav-menu-link">Music</div></li>
-                <li><div className="nav-menu-link">News Feed</div></li>
-                <li><div className="nav-menu-link active">Chat</div></li>
-              </ul>
-            </nav>
-          </aside>
+      {/* Sidebar - как в MainPage */}
+      <aside className="main-sidebar">
+        <div className="sidebar-profile">
+          <img src="/images/authimage.png" alt="Avatar" className="sidebar-avatar" />
+          <div className="sidebar-profile-info">
+            <div className="sidebar-profile-name">Марина Лазарева</div>
+            <div className="sidebar-profile-role">3d Designer</div>
+          </div>
+        </div>
+        
+        <nav className="sidebar-nav">
+          <div className="sidebar-nav-link">Друзья</div>
+          <div className="sidebar-nav-link">Музыка</div>
+          <Link to="/" className="sidebar-nav-link">Лента</Link>
+          <div className="sidebar-nav-link active">Сообщения</div>
+        </nav>
+      </aside>
 
-          {/* Chat List */}
-          <main className="chat-list-section">
+      {/* Chat List */}
+      <main className="chat-list-section">
             <div className="search-header">
               <input
                 type="text"
@@ -101,10 +95,9 @@ const ChatPage = () => {
                 <div className="no-chats">No chats found</div>
               )}
             </div>
-          </main>
-        </div>
+      </main>
 
-        {/* Placeholder или чат */}
+      {/* Placeholder или чат */}
         {activeChat ? (
           <section className="chat-area">
             <div className="chat-area-header">
@@ -139,7 +132,6 @@ const ChatPage = () => {
             </div>
           </section>
         )}
-      </div>
     </div>
   );
 };
