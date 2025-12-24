@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NextgenMessanger.Core.Entities;
+using NextgenMessanger.Core.Enums;
 
 namespace NextgenMessanger.Infrastructure.Data.Configurations;
 
@@ -10,9 +12,14 @@ public class FollowConfiguration : IEntityTypeConfiguration<Follow>
     {
         builder.HasKey(f => f.Id);
 
+        var converter = new ValueConverter<FollowStatus, string>(
+            v => v.ToString().ToLowerInvariant(),
+            v => Enum.Parse<FollowStatus>(v, true));
+
         builder.Property(f => f.Status)
+            .HasConversion(converter)
             .HasMaxLength(20)
-            .HasDefaultValue("accepted");
+            .HasDefaultValue(FollowStatus.Accepted);
 
         builder.Property(f => f.CreatedAt)
             .HasDefaultValueSql("NOW()");

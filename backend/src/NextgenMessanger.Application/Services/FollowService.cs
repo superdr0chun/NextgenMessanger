@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NextgenMessanger.Application.Interfaces;
 using NextgenMessanger.Core.DTOs.Follow;
+using NextgenMessanger.Core.Enums;
 using NextgenMessanger.Infrastructure.Data;
 
 namespace NextgenMessanger.Application.Services;
@@ -35,7 +36,7 @@ public class FollowService : IFollowService
         {
             if (!existingFollow.Deleted)
             {
-                if (existingFollow.Status == "accepted")
+                if (existingFollow.Status == FollowStatus.Accepted)
                 {
                     return new FollowDto
                     {
@@ -51,14 +52,14 @@ public class FollowService : IFollowService
                     };
                 }
 
-                existingFollow.Status = "accepted";
+                existingFollow.Status = FollowStatus.Accepted;
                 existingFollow.UpdatedAt = DateTime.UtcNow;
             }
             else
             {
                 existingFollow.Deleted = false;
                 existingFollow.DeletedAt = null;
-                existingFollow.Status = "accepted";
+                existingFollow.Status = FollowStatus.Accepted;
                 existingFollow.UpdatedAt = DateTime.UtcNow;
 
                 // Если подписка была удалена и теперь восстанавливается, создать уведомление
@@ -75,7 +76,7 @@ public class FollowService : IFollowService
                 Id = Guid.NewGuid(),
                 FollowerId = followerId,
                 FolloweeId = followeeId,
-                Status = "accepted",
+                Status = FollowStatus.Accepted,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 Deleted = false
@@ -140,7 +141,7 @@ public class FollowService : IFollowService
             .Include(f => f.Followee)
                 .ThenInclude(u => u.Profile)
             .Where(f => f.FolloweeId == userId 
-                && f.Status == "accepted" 
+                && f.Status == FollowStatus.Accepted 
                 && !f.Deleted)
             .OrderByDescending(f => f.CreatedAt)
             .Skip((page - 1) * pageSize)
@@ -169,7 +170,7 @@ public class FollowService : IFollowService
             .Include(f => f.Followee)
                 .ThenInclude(u => u.Profile)
             .Where(f => f.FollowerId == userId 
-                && f.Status == "accepted" 
+                && f.Status == FollowStatus.Accepted 
                 && !f.Deleted)
             .OrderByDescending(f => f.CreatedAt)
             .Skip((page - 1) * pageSize)
@@ -195,7 +196,7 @@ public class FollowService : IFollowService
         return await _context.Follows
             .AnyAsync(f => f.FollowerId == followerId 
                 && f.FolloweeId == followeeId 
-                && f.Status == "accepted" 
+                && f.Status == FollowStatus.Accepted 
                 && !f.Deleted);
     }
 }

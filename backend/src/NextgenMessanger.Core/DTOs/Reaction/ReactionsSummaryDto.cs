@@ -1,9 +1,11 @@
+using NextgenMessanger.Core.Enums;
+
 namespace NextgenMessanger.Core.DTOs.Reaction;
 
 public class ReactionsSummaryDto
 {
-    public Dictionary<string, int> Counts { get; set; } = new();
+    public Dictionary<ReactionType, int> Counts { get; set; } = new();
     public List<ReactionDto> RecentReactions { get; set; } = new();
-    public string? CurrentUserReaction { get; set; }
+    public ReactionType? CurrentUserReaction { get; set; }
 }
 

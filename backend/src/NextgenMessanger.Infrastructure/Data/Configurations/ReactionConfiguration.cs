@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NextgenMessanger.Core.Entities;
+using NextgenMessanger.Core.Enums;
 
 namespace NextgenMessanger.Infrastructure.Data.Configurations;
 
@@ -10,9 +12,14 @@ public class ReactionConfiguration : IEntityTypeConfiguration<Reaction>
     {
         builder.HasKey(r => r.Id);
 
+        var converter = new ValueConverter<ReactionType, string>(
+            v => v.ToString().ToLowerInvariant(),
+            v => Enum.Parse<ReactionType>(v, true));
+
         builder.Property(r => r.Type)
+            .HasConversion(converter)
             .HasMaxLength(20)
-            .HasDefaultValue("like");
+            .HasDefaultValue(ReactionType.Like);
 
         builder.Property(r => r.CreatedAt)
             .HasDefaultValueSql("NOW()");

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NextgenMessanger.Application.Interfaces;
 using NextgenMessanger.Core.DTOs.Chat;
+using NextgenMessanger.Core.Enums;
 using NextgenMessanger.Infrastructure.Data;
 
 namespace NextgenMessanger.Application.Services;
@@ -16,7 +17,7 @@ public class ChatService : IChatService
 
     public async Task<ChatDto> CreateChatAsync(Guid userId, CreateChatDto createDto)
     {
-        if (createDto.Type == "direct")
+        if (createDto.Type == ChatType.Direct)
         {
             if (createDto.ParticipantIds.Count != 1)
             {
@@ -30,7 +31,7 @@ public class ChatService : IChatService
             }
 
             var existingChat = await _context.Chats
-                .Where(c => c.Type == "direct" && !c.Deleted)
+                .Where(c => c.Type == ChatType.Direct && !c.Deleted)
                 .Join(_context.ChatParticipants.Where(cp => cp.UserId == userId && !cp.Deleted),
                     chat => chat.Id,
                     participant => participant.ChatId,
@@ -67,7 +68,7 @@ public class ChatService : IChatService
                 Id = Guid.NewGuid(),
                 ChatId = chat.Id,
                 UserId = userId,
-                Role = "owner",
+                Role = ChatParticipantRole.Owner,
                 JoinedAt = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -87,7 +88,7 @@ public class ChatService : IChatService
                 Id = Guid.NewGuid(),
                 ChatId = chat.Id,
                 UserId = participantId,
-                Role = createDto.Type == "group" ? "member" : "member",
+                Role = ChatParticipantRole.Member,
                 JoinedAt = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -220,7 +221,7 @@ public class ChatService : IChatService
             throw new UnauthorizedAccessException("You are not a participant of this chat");
         }
 
-        if (chat.Type == "group" && participant.Role != "owner" && participant.Role != "admin")
+        if (chat.Type == ChatType.Group && participant.Role != ChatParticipantRole.Owner && participant.Role != ChatParticipantRole.Admin)
         {
             throw new UnauthorizedAccessException("Only owners and admins can update group chats");
         }
@@ -246,7 +247,7 @@ public class ChatService : IChatService
             throw new KeyNotFoundException("Chat not found");
         }
 
-        if (chat.Type == "direct")
+        if (chat.Type == ChatType.Direct)
         {
             throw new InvalidOperationException("Cannot add participants to direct chat");
         }
@@ -262,7 +263,7 @@ public class ChatService : IChatService
             throw new UnauthorizedAccessException("You are not a participant of this chat");
         }
 
-        if (participant.Role != "owner" && participant.Role != "admin")
+        if (participant.Role != ChatParticipantRole.Owner && participant.Role != ChatParticipantRole.Admin)
         {
             throw new UnauthorizedAccessException("Only owners and admins can add participants");
         }
@@ -288,7 +289,7 @@ public class ChatService : IChatService
                 Id = Guid.NewGuid(),
                 ChatId = chatId,
                 UserId = participantId,
-                Role = "member",
+                Role = ChatParticipantRole.Member,
                 JoinedAt = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -340,17 +341,17 @@ public class ChatService : IChatService
         }
         else
         {
-            if (chat.Type == "direct")
+            if (chat.Type == ChatType.Direct)
             {
                 throw new InvalidOperationException("Cannot remove participant from direct chat");
             }
 
-            if (currentParticipant.Role != "owner" && currentParticipant.Role != "admin")
+            if (currentParticipant.Role != ChatParticipantRole.Owner && currentParticipant.Role != ChatParticipantRole.Admin)
             {
                 throw new UnauthorizedAccessException("Only owners and admins can remove participants");
             }
 
-            if (targetParticipant.Role == "owner")
+            if (targetParticipant.Role == ChatParticipantRole.Owner)
             {
                 throw new InvalidOperationException("Cannot remove owner from chat");
             }

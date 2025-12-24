@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NextgenMessanger.Core.Entities;
+using NextgenMessanger.Core.Enums;
 
 namespace NextgenMessanger.Infrastructure.Data.Configurations;
 
@@ -10,9 +12,14 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
     {
         builder.HasKey(p => p.Id);
 
+        var converter = new ValueConverter<PostVisibility, string>(
+            v => v.ToString().ToLowerInvariant(),
+            v => Enum.Parse<PostVisibility>(v, true));
+
         builder.Property(p => p.Visibility)
+            .HasConversion(converter)
             .HasMaxLength(20)
-            .HasDefaultValue("public");
+            .HasDefaultValue(PostVisibility.Public);
 
         builder.Property(p => p.CreatedAt)
             .HasDefaultValueSql("NOW()");

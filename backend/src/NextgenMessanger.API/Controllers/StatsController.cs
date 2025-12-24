@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NextgenMessanger.Core.Enums;
 using NextgenMessanger.Infrastructure.Data;
 
 namespace NextgenMessanger.API.Controllers;
@@ -32,11 +33,11 @@ public class StatsController : ControllerBase
                 Posts = new
                 {
                     Total = await _context.Posts.CountAsync(p => !p.Deleted),
-                    Public = await _context.Posts.CountAsync(p => !p.Deleted && p.Visibility == "public")
+                    Public = await _context.Posts.CountAsync(p => !p.Deleted && p.Visibility == PostVisibility.Public)
                 },
                 Comments = await _context.Comments.CountAsync(c => !c.Deleted),
                 Reactions = await _context.Reactions.CountAsync(r => !r.Deleted),
-                Follows = await _context.Follows.CountAsync(f => !f.Deleted && f.Status == "accepted"),
+                Follows = await _context.Follows.CountAsync(f => !f.Deleted && f.Status == FollowStatus.Accepted),
                 Chats = await _context.Chats.CountAsync(c => !c.Deleted),
                 Messages = await _context.ChatMessages.CountAsync(m => !m.Deleted),
                 Notifications = await _context.Notifications.CountAsync(n => !n.Deleted),

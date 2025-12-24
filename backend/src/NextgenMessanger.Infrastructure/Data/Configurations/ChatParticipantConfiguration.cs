@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NextgenMessanger.Core.Entities;
+using NextgenMessanger.Core.Enums;
 
 namespace NextgenMessanger.Infrastructure.Data.Configurations;
 
@@ -10,9 +12,14 @@ public class ChatParticipantConfiguration : IEntityTypeConfiguration<ChatPartici
     {
         builder.HasKey(cp => cp.Id);
 
+        var converter = new ValueConverter<ChatParticipantRole, string>(
+            v => v.ToString().ToLowerInvariant(),
+            v => Enum.Parse<ChatParticipantRole>(v, true));
+
         builder.Property(cp => cp.Role)
+            .HasConversion(converter)
             .HasMaxLength(20)
-            .HasDefaultValue("member");
+            .HasDefaultValue(ChatParticipantRole.Member);
 
         builder.Property(cp => cp.JoinedAt)
             .HasDefaultValueSql("NOW()");

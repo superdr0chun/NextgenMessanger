@@ -1,8 +1,10 @@
+using NextgenMessanger.Core.Enums;
+
 namespace NextgenMessanger.Core.Entities;
 
 public class Chat : BaseEntity
 {
-    public string Type { get; set; } = "direct";
+    public ChatType Type { get; set; } = ChatType.Direct;
     public string? Title { get; set; }
     public Guid? CreatedBy { get; set; }
     public DateTime? LastMessageAt { get; set; }
