@@ -1,8 +1,10 @@
+using NextgenMessanger.Core.Enums;
+
 namespace NextgenMessanger.Core.DTOs.Chat;
 
 public class CreateChatDto
 {
-    public string Type { get; set; } = "direct";
+    public ChatType Type { get; set; } = ChatType.Direct;
     public string? Title { get; set; }
     public List<Guid> ParticipantIds { get; set; } = new();
 }

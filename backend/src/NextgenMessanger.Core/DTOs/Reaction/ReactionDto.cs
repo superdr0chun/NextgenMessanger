@@ -1,3 +1,5 @@
+using NextgenMessanger.Core.Enums;
+
 namespace NextgenMessanger.Core.DTOs.Reaction;
 
 public class ReactionDto
@@ -7,7 +9,7 @@ public class ReactionDto
     public Guid UserId { get; set; }
     public string Username { get; set; } = string.Empty;
     public string? UserAvatarUrl { get; set; }
-    public string Type { get; set; } = string.Empty;
+    public ReactionType Type { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 

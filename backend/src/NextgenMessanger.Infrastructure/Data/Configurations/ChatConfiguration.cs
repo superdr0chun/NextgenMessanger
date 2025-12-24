@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NextgenMessanger.Core.Entities;
+using NextgenMessanger.Core.Enums;
 
 namespace NextgenMessanger.Infrastructure.Data.Configurations;
 
@@ -10,9 +12,14 @@ public class ChatConfiguration : IEntityTypeConfiguration<Chat>
     {
         builder.HasKey(c => c.Id);
 
+        var converter = new ValueConverter<ChatType, string>(
+            v => v.ToString().ToLowerInvariant(),
+            v => Enum.Parse<ChatType>(v, true));
+
         builder.Property(c => c.Type)
+            .HasConversion(converter)
             .HasMaxLength(20)
-            .HasDefaultValue("direct");
+            .HasDefaultValue(ChatType.Direct);
 
         builder.Property(c => c.Title)
             .HasMaxLength(100);

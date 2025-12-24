@@ -5,7 +5,9 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using NextgenMessanger.Application.Interfaces;
 using NextgenMessanger.Application.Services;
+using NextgenMessanger.Core.Repositories;
 using NextgenMessanger.Infrastructure.Data;
+using NextgenMessanger.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,6 +66,10 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// Repositories
+builder.Services.AddScoped<IPostRepository, PostRepository>();
+
+// Services
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();

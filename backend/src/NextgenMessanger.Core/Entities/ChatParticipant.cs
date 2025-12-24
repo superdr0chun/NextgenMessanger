@@ -1,10 +1,12 @@
+using NextgenMessanger.Core.Enums;
+
 namespace NextgenMessanger.Core.Entities;
 
 public class ChatParticipant : BaseEntity
 {
     public Guid ChatId { get; set; }
     public Guid UserId { get; set; }
-    public string Role { get; set; } = "member";
+    public ChatParticipantRole Role { get; set; } = ChatParticipantRole.Member;
     public DateTime JoinedAt { get; set; }
     public DateTime? LeftAt { get; set; }
 

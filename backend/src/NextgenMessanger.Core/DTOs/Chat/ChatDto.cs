@@ -1,9 +1,11 @@
+using NextgenMessanger.Core.Enums;
+
 namespace NextgenMessanger.Core.DTOs.Chat;
 
 public class ChatDto
 {
     public Guid Id { get; set; }
-    public string Type { get; set; } = string.Empty;
+    public ChatType Type { get; set; }
     public string? Title { get; set; }
     public Guid CreatedBy { get; set; }
     public string? CreatedByUsername { get; set; }

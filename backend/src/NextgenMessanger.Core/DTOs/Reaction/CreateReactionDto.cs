@@ -1,7 +1,9 @@
+using NextgenMessanger.Core.Enums;
+
 namespace NextgenMessanger.Core.DTOs.Reaction;
 
 public class CreateReactionDto
 {
-    public string Type { get; set; } = "like";
+    public ReactionType Type { get; set; } = ReactionType.Like;
 }
 

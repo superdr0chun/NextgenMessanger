@@ -1,3 +1,5 @@
+using NextgenMessanger.Core.Enums;
+
 namespace NextgenMessanger.Core.DTOs.Follow;
 
 public class FollowDto
@@ -9,7 +11,7 @@ public class FollowDto
     public Guid FolloweeId { get; set; }
     public string FolloweeUsername { get; set; } = string.Empty;
     public string? FolloweeAvatarUrl { get; set; }
-    public string Status { get; set; } = string.Empty;
+    public FollowStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
