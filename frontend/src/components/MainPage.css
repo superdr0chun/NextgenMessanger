@@ -75,7 +75,7 @@
   flex: 1;
   padding: 20px;
   gap: 20px;
-  position: relative; /* Для абсолютного позиционирования sidebar */
+  position: relative;
 }
 
 .content-wrapper {
@@ -84,21 +84,30 @@
   max-width: 1200px;
   width: 100%;
   position: relative;
+  /* Отступ слева для sidebar (247px + gap) */
+  margin-left: 267px;
 }
 
-/* ЛЕВОЕ МЕНЮ - отдельный элемент с абсолютным позиционированием */
+/* ЛЕВОЕ МЕНЮ - параметры согласно макету (Rectangle 39) */
 .sidebar {
+  /* Layout */
   width: 247px;
   height: 925px;
-  background: linear-gradient(180deg, #282728, #282728);
   border-radius: 21px;
+  
+  /* Colors - Linear Gradient с #282728 */
+  background: #282728; /* Solid color, так как градиент от одного цвета к тому же */
+  
+  /* Positioning - относительно .main-container (вся страница) */
+  position: fixed;
+  left: 0; /* Прилипает к левому краю страницы */
+  top: 125px; /* Отступ сверху согласно макету */
+  z-index: 1;
+  
+  /* Content */
   padding: 20px;
   display: flex;
   flex-direction: column;
-  position: absolute;
-  left: 20px; /* Отступ от левого края main-content */
-  top: 125px; /* Позиция сверху согласно макету */
-  z-index: 1; /* Поверх других элементов */
 }
 
 .profile {
@@ -165,6 +174,7 @@
 .central-content {
   flex: 1;
   max-width: 600px;
+  min-width: 0; /* Для правильной работы flex */
 }
 
 .stories {
