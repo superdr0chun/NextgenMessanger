@@ -9,7 +9,8 @@ body {
   font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f0f0f0; /* если нужно, но у вас фон в компонентах */
+  /* Фон будет задан в компонентах */
+  background: transparent;
 }
 
 code {
