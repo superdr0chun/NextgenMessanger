@@ -86,5 +86,18 @@ public class NotificationsController : ControllerBase
         await _notificationService.MarkAllAsReadAsync(userId);
         return Ok(new { message = "All notifications marked as read" });
     }
+
+    [HttpGet("unread-count/{type}")]
+    public async Task<IActionResult> GetUnreadCountByType(string type)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var count = await _notificationService.GetUnreadCountByTypeAsync(userId, type);
+        return Ok(new { count });
+    }
 }
 

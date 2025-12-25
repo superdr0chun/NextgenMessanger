@@ -111,6 +111,7 @@ public class ChatService : IChatService
 
         var chats = await _context.Chats
             .Include(c => c.Creator)
+            .Include(c => c.LastMessage)
             .Where(c => chatIds.Contains(c.Id) && !c.Deleted)
             .OrderByDescending(c => c.LastMessageAt ?? c.CreatedAt)
             .ToListAsync();
@@ -125,6 +126,17 @@ public class ChatService : IChatService
                 .Where(cp => cp.ChatId == chat.Id && !cp.Deleted && cp.LeftAt == null)
                 .ToListAsync();
 
+            // Calculate unread count for current user
+            var currentParticipant = participants.FirstOrDefault(p => p.UserId == userId);
+            var lastReadAt = currentParticipant?.LastReadAt;
+            
+            var unreadCount = await _context.ChatMessages
+                .Where(m => m.ChatId == chat.Id 
+                    && !m.Deleted 
+                    && m.SenderId != userId
+                    && (lastReadAt == null || m.CreatedAt > lastReadAt))
+                .CountAsync();
+
             result.Add(new ChatDto
             {
                 Id = chat.Id,
@@ -133,6 +145,9 @@ public class ChatService : IChatService
                 CreatedBy = chat.CreatedBy ?? Guid.Empty,
                 CreatedByUsername = chat.Creator?.Username ?? string.Empty,
                 LastMessageAt = chat.LastMessageAt,
+                LastMessageContent = chat.LastMessage?.Content,
+                LastMessageSenderId = chat.LastMessage?.SenderId,
+                UnreadCount = unreadCount,
                 Participants = participants.Select(p => new ChatParticipantDto
                 {
                     Id = p.Id,
@@ -165,6 +180,7 @@ public class ChatService : IChatService
 
         var chat = await _context.Chats
             .Include(c => c.Creator)
+            .Include(c => c.LastMessage)
             .FirstOrDefaultAsync(c => c.Id == chatId && !c.Deleted);
 
         if (chat == null)
@@ -178,6 +194,17 @@ public class ChatService : IChatService
             .Where(cp => cp.ChatId == chatId && !cp.Deleted && cp.LeftAt == null)
             .ToListAsync();
 
+        // Calculate unread count for current user
+        var currentParticipant = participants.FirstOrDefault(p => p.UserId == userId);
+        var lastReadAt = currentParticipant?.LastReadAt;
+        
+        var unreadCount = await _context.ChatMessages
+            .Where(m => m.ChatId == chatId 
+                && !m.Deleted 
+                && m.SenderId != userId
+                && (lastReadAt == null || m.CreatedAt > lastReadAt))
+            .CountAsync();
+
         return new ChatDto
         {
             Id = chat.Id,
@@ -186,6 +213,9 @@ public class ChatService : IChatService
             CreatedBy = chat.CreatedBy ?? Guid.Empty,
             CreatedByUsername = chat.Creator?.Username ?? string.Empty,
             LastMessageAt = chat.LastMessageAt,
+            LastMessageContent = chat.LastMessage?.Content,
+            LastMessageSenderId = chat.LastMessage?.SenderId,
+            UnreadCount = unreadCount,
             Participants = participants.Select(p => new ChatParticipantDto
             {
                 Id = p.Id,
@@ -198,6 +228,22 @@ public class ChatService : IChatService
             CreatedAt = chat.CreatedAt,
             UpdatedAt = chat.UpdatedAt
         };
+    }
+
+    public async Task MarkChatAsReadAsync(Guid chatId, Guid userId)
+    {
+        var participant = await _context.ChatParticipants
+            .FirstOrDefaultAsync(cp => cp.ChatId == chatId 
+                && cp.UserId == userId 
+                && !cp.Deleted 
+                && cp.LeftAt == null);
+
+        if (participant != null)
+        {
+            participant.LastReadAt = DateTime.UtcNow;
+            participant.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
     }
 
     public async Task<ChatDto> UpdateChatAsync(Guid chatId, Guid userId, UpdateChatDto updateDto)

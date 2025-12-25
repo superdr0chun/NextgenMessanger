@@ -45,11 +45,11 @@ public class UserService : IUserService
 
         if (!string.IsNullOrWhiteSpace(query))
         {
-            var searchTerm = query;
+            var searchTerm = query.ToLowerInvariant();
             usersQuery = usersQuery.Where(u =>
-                u.Username.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                (u.FullName != null && u.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
-                u.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+                u.Username.ToLower().Contains(searchTerm) ||
+                (u.FullName != null && u.FullName.ToLower().Contains(searchTerm)) ||
+                u.Email.ToLower().Contains(searchTerm));
         }
 
         var users = await usersQuery

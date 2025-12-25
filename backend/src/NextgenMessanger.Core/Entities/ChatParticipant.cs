@@ -9,6 +9,7 @@ public class ChatParticipant : BaseEntity
     public ChatParticipantRole Role { get; set; } = ChatParticipantRole.Member;
     public DateTime JoinedAt { get; set; }
     public DateTime? LeftAt { get; set; }
+    public DateTime? LastReadAt { get; set; }
 
     public Chat Chat { get; set; } = null!;
     public User User { get; set; } = null!;

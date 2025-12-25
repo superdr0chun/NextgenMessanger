@@ -10,5 +10,6 @@ public interface IChatService
     Task<ChatDto> UpdateChatAsync(Guid chatId, Guid userId, UpdateChatDto updateDto);
     Task AddParticipantAsync(Guid chatId, Guid userId, Guid participantId);
     Task RemoveParticipantAsync(Guid chatId, Guid userId, Guid participantId);
+    Task MarkChatAsReadAsync(Guid chatId, Guid userId);
 }
 
