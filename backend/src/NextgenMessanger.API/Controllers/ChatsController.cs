@@ -92,5 +92,18 @@ public class ChatsController : ControllerBase
             return Forbid();
         }
     }
+
+    [HttpPost("{id}/read")]
+    public async Task<IActionResult> MarkChatAsRead(Guid id)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        await _chatService.MarkChatAsReadAsync(id, userId);
+        return NoContent();
+    }
 }
 

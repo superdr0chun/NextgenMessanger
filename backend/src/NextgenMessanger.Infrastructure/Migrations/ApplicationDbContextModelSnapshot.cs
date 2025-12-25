@@ -158,6 +158,9 @@ namespace NextgenMessanger.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("NOW()");
 
+                    b.Property<DateTime?>("LastReadAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("LeftAt")
                         .HasColumnType("timestamp with time zone");
 

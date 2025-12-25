@@ -9,6 +9,7 @@ public interface INotificationService
     Task MarkAsReadAsync(Guid notificationId, Guid userId);
     Task MarkAllAsReadAsync(Guid userId);
     Task<int> GetUnreadCountAsync(Guid userId);
+    Task<int> GetUnreadCountByTypeAsync(Guid userId, string type);
     Task CreateNotificationAsync(Guid userId, string type, object? data = null);
 }
 

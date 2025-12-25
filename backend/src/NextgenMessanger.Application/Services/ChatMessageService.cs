@@ -49,6 +49,7 @@ public class ChatMessageService : IChatMessageService
         if (chat != null)
         {
             chat.LastMessageAt = DateTime.UtcNow;
+            chat.LastMessageId = message.Id;
             chat.UpdatedAt = DateTime.UtcNow;
         }
 

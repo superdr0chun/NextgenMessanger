@@ -94,6 +94,12 @@ public class NotificationService : INotificationService
             .CountAsync(n => n.UserId == userId && !n.Deleted && !n.IsRead);
     }
 
+    public async Task<int> GetUnreadCountByTypeAsync(Guid userId, string type)
+    {
+        return await _context.Notifications
+            .CountAsync(n => n.UserId == userId && n.Type == type && !n.Deleted && !n.IsRead);
+    }
+
     public async Task CreateNotificationAsync(Guid userId, string type, object? data = null)
     {
         var notification = new Core.Entities.Notification
