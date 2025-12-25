@@ -1,8 +1,36 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import './MainPage.css';
 
 function MainPage() {
+  const navigate = useNavigate();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleAvatarClick = () => {
+    setShowDropdown(!showDropdown);
+  };
+
+  const handleLogout = () => {
+    // TODO: Add API call to logout endpoint
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    navigate('/auth');
+  };
+
   return (
     <div className="main-page">
       <header className="main-header">
@@ -17,16 +45,31 @@ function MainPage() {
         </div>
         
         <img src="/notifications.png" alt="Notifications" className="header-notifications-icon" />
+        <div className="header-user-profile" ref={dropdownRef}>
+          <img 
+            src="/images/authimage.png" 
+            alt="User Avatar" 
+            className="header-user-avatar" 
+            onClick={handleAvatarClick}
+          />
+          {showDropdown && (
+            <div className="header-dropdown-menu">
+              <button className="header-dropdown-item" onClick={handleLogout}>
+                Выйти
+              </button>
+            </div>
+          )}
+        </div>
       </header>
       
       <aside className="main-sidebar">
-        <div className="sidebar-profile">
+        <Link to="/profile" className="sidebar-profile">
           <img src="/images/authimage.png" alt="Avatar" className="sidebar-avatar" />
           <div className="sidebar-profile-info">
             <div className="sidebar-profile-name">Марина Лазарева</div>
             <div className="sidebar-profile-role">3d Designer</div>
           </div>
-        </div>
+        </Link>
         
         <nav className="sidebar-nav">
           <div className="sidebar-nav-link">Друзья</div>
