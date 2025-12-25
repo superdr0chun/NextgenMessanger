@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import './ProfilePage.css';
 import './MainPage.css';
@@ -9,6 +9,8 @@ import { userService } from '../services/userService';
 import { followService } from '../services/followService';
 import api from '../services/api';
 import { notificationService } from '../services/notificationService';
+import { reactionService } from '../services/reactionService';
+import { commentService } from '../services/commentService';
 
 function ProfilePage() {
   const navigate = useNavigate();
@@ -26,7 +28,19 @@ function ProfilePage() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [userPosts, setUserPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [expandedComments, setExpandedComments] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [notificationUsers, setNotificationUsers] = useState({});
   const dropdownRef = useRef(null);
+  const notificationsRef = useRef(null);
   const searchInputRef = useRef(null);
   const searchContainerRef = useRef(null);
 
@@ -39,6 +53,9 @@ function ProfilePage() {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
       }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -46,6 +63,79 @@ function ProfilePage() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Helper function to extract user ID from notification
+  const getNotificationUserId = useCallback((notification) => {
+    if (notification.data) {
+      try {
+        const data = typeof notification.data === 'string' 
+          ? JSON.parse(notification.data) 
+          : notification.data;
+        return data.follower_id || data.followerId || data.user_id || data.userId || null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }, []);
+
+  // Load notifications
+  useEffect(() => {
+    if (!authService.isAuthenticated()) return;
+    
+    const loadNotifications = async () => {
+      try {
+        const data = await notificationService.getNotifications(1, 20);
+        const allNotifs = data.notifications || [];
+        // Filter out message notifications - they are shown in navigation
+        const notifs = allNotifs.filter(n => n.type !== 'new_message');
+        setNotifications(notifs);
+        // Count unread non-message notifications
+        const unreadNonMessage = notifs.filter(n => !n.isRead).length;
+        setUnreadNotificationsCount(unreadNonMessage);
+        
+        // Load user info for notifications that don't have username
+        const userIdsToLoad = [];
+        notifs.forEach(notification => {
+          const notifUserId = getNotificationUserId(notification);
+          if (notifUserId && !notificationUsers[notifUserId]) {
+            try {
+              const notifData = typeof notification.data === 'string' 
+                ? JSON.parse(notification.data) 
+                : notification.data;
+              if (!notifData.follower_username && !notifData.followerUsername && !notifData.username) {
+                userIdsToLoad.push(notifUserId);
+              }
+            } catch (e) {
+              userIdsToLoad.push(notifUserId);
+            }
+          }
+        });
+        
+        // Load unique user IDs
+        const uniqueUserIds = [...new Set(userIdsToLoad)];
+        if (uniqueUserIds.length > 0) {
+          const usersInfo = {};
+          await Promise.all(uniqueUserIds.map(async (id) => {
+            try {
+              const userInfo = await userService.getUserById(id);
+              usersInfo[id] = userInfo;
+            } catch (e) {
+              console.error('Error loading user:', id, e);
+            }
+          }));
+          setNotificationUsers(prev => ({ ...prev, ...usersInfo }));
+        }
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+      }
+    };
+
+    loadNotifications();
+    // Refresh every 10 seconds
+    const interval = setInterval(loadNotifications, 10000);
+    return () => clearInterval(interval);
+  }, [getNotificationUserId, notificationUsers]);
 
   const loadUserStats = async (targetUserId) => {
     try {
@@ -208,6 +298,100 @@ function ProfilePage() {
     return () => clearInterval(interval);
   }, [currentUser?.id]);
 
+  // Load user posts
+  useEffect(() => {
+    const loadUserPosts = async () => {
+      const targetUserId = userId || currentUser?.id;
+      if (!targetUserId) return;
+
+      setPostsLoading(true);
+      try {
+        const response = await api.get(`/users/${targetUserId}/posts`, {
+          params: { page: 1, pageSize: 50 },
+        });
+        setUserPosts(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        console.error('Error loading user posts:', error);
+        setUserPosts([]);
+      } finally {
+        setPostsLoading(false);
+      }
+    };
+
+    loadUserPosts();
+  }, [userId, currentUser?.id]);
+
+  // Get first letter of username for avatar
+  const getAuthorLetter = (username) => {
+    return username ? username.charAt(0).toUpperCase() : '?';
+  };
+
+  // Handle like/unlike
+  const handleLike = async (postId, isCurrentlyLiked) => {
+    try {
+      await reactionService.toggleLike(postId, isCurrentlyLiked);
+      // Update the post in the local state
+      setUserPosts(prevPosts => prevPosts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            isLikedByCurrentUser: !isCurrentlyLiked,
+            reactionsCount: isCurrentlyLiked 
+              ? Math.max(0, (post.reactionsCount || 1) - 1) 
+              : (post.reactionsCount || 0) + 1
+          };
+        }
+        return post;
+      }));
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
+  };
+
+  // Toggle comments section
+  const toggleComments = async (postId) => {
+    if (expandedComments === postId) {
+      setExpandedComments(null);
+      setComments([]);
+      return;
+    }
+    
+    setExpandedComments(postId);
+    setCommentsLoading(true);
+    try {
+      const commentsData = await commentService.getComments(postId);
+      setComments(Array.isArray(commentsData) ? commentsData : []);
+    } catch (error) {
+      console.error('Error loading comments:', error);
+      setComments([]);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  // Submit new comment
+  const handleSubmitComment = async (postId) => {
+    if (!newComment.trim() || isSubmittingComment) return;
+    
+    setIsSubmittingComment(true);
+    try {
+      const comment = await commentService.createComment(postId, newComment.trim());
+      setComments(prev => [comment, ...prev]);
+      setNewComment('');
+      // Update comments count in post
+      setUserPosts(prevPosts => prevPosts.map(post => {
+        if (post.id === postId) {
+          return { ...post, commentsCount: (post.commentsCount || 0) + 1 };
+        }
+        return post;
+      }));
+    } catch (error) {
+      console.error('Error creating comment:', error);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
   const handleFollowToggle = async () => {
     if (!userId || !currentUser?.id || followLoading) return;
 
@@ -249,6 +433,94 @@ function ProfilePage() {
     setShowDropdown(!showDropdown);
   };
 
+  const handleNotificationsClick = () => {
+    setShowNotifications(!showNotifications);
+  };
+
+  const handleNotificationClick = async (notification) => {
+    // Mark as read
+    if (!notification.isRead) {
+      try {
+        await notificationService.markAsRead(notification.id);
+        setNotifications(prev => prev.map(n => 
+          n.id === notification.id ? { ...n, isRead: true } : n
+        ));
+        setUnreadNotificationsCount(prev => Math.max(0, prev - 1));
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+      }
+    }
+
+    // Navigate based on notification type
+    if (notification.type === 'new_follower' && notification.data) {
+      try {
+        const data = typeof notification.data === 'string' 
+          ? JSON.parse(notification.data) 
+          : notification.data;
+        const followerId = data.follower_id || data.followerId;
+        if (followerId) {
+          setShowNotifications(false);
+          navigate(`/profile/${followerId}`);
+        }
+      } catch (e) {
+        console.error('Error parsing notification data:', e);
+      }
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadNotificationsCount(0);
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  };
+
+  const getNotificationText = (notification) => {
+    if (notification.type === 'new_follower') {
+      return 'подписался на вас';
+    }
+    if (notification.type === 'new_message') {
+      return 'отправил вам сообщение';
+    }
+    if (notification.type === 'new_comment') {
+      return 'прокомментировал ваш пост';
+    }
+    if (notification.type === 'new_like') {
+      return 'оценил ваш пост';
+    }
+    return 'новое уведомление';
+  };
+
+  const getNotificationUsername = (notification) => {
+    if (notification.data) {
+      try {
+        const data = typeof notification.data === 'string' 
+          ? JSON.parse(notification.data) 
+          : notification.data;
+        
+        // Try multiple property name variations
+        const username = data.follower_username || data.followerUsername || 
+                        data.username || data.user_name || data.userName;
+        
+        if (username) return username;
+        
+        // Try to get from cached users
+        const notifUserId = data.follower_id || data.followerId || data.user_id || data.userId;
+        if (notifUserId && notificationUsers[notifUserId]) {
+          return notificationUsers[notifUserId].username || notificationUsers[notifUserId].userName || 'Пользователь';
+        }
+        
+        return 'Пользователь';
+      } catch (e) {
+        return 'Пользователь';
+      }
+    }
+    return 'Пользователь';
+  };
+
   const handleLogout = async () => {
     await authService.logout();
     clearUser();
@@ -286,7 +558,57 @@ function ProfilePage() {
           )}
         </div>
         
-        <img src="/notifications.png" alt="Notifications" className="header-notifications-icon" />
+        <div className="header-notifications" ref={notificationsRef}>
+          <div className="header-notifications-btn" onClick={handleNotificationsClick}>
+            <img src="/notifications.png" alt="Notifications" className="header-notifications-icon" />
+            {unreadNotificationsCount > 0 && (
+              <span className="notifications-badge">{unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}</span>
+            )}
+          </div>
+          {showNotifications && (
+            <div className="notifications-dropdown">
+              <div className="notifications-header">
+                <span className="notifications-title">Уведомления</span>
+                {unreadNotificationsCount > 0 && (
+                  <button className="mark-all-read-btn" onClick={handleMarkAllAsRead}>
+                    Прочитать все
+                  </button>
+                )}
+              </div>
+              <div className="notifications-list">
+                {notifications.length > 0 ? (
+                  notifications.map(notification => (
+                    <div 
+                      key={notification.id} 
+                      className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <div className="notification-avatar">
+                        {getNotificationUsername(notification).charAt(0).toUpperCase()}
+                      </div>
+                      <div className="notification-content">
+                        <span className="notification-text">
+                          <strong>{getNotificationUsername(notification)}</strong> {getNotificationText(notification)}
+                        </span>
+                        <span className="notification-time">
+                          {new Date(notification.createdAt).toLocaleDateString('ru-RU', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      {!notification.isRead && <div className="notification-dot" />}
+                    </div>
+                  ))
+                ) : (
+                  <div className="no-notifications">Нет уведомлений</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
         {authService.isAuthenticated() ? (
           <div className="header-user-profile" ref={dropdownRef}>
             <img 
@@ -358,7 +680,6 @@ function ProfilePage() {
                   <div className="profile-main-name">{displayUser?.fullName || displayUser?.username || 'Пользователь'}</div>
                   <div className="profile-main-username">@{displayUser?.username || ''}</div>
                   <div className="profile-main-bio">Создаю 3D-миры и дизайн. Люблю играть с текстурами.</div>
-                  <div className="profile-main-contact">Контакт: {displayUser?.email || ''}</div>
                 </>
               )}
             </div>
@@ -379,9 +700,112 @@ function ProfilePage() {
           </div>
         </div>
         
-        <div className="profile-posts-block">
+        <div className="profile-posts-section">
           <h2 className="profile-posts-title">Публикации</h2>
-          {/* Публикации пользователя будут добавлены позже */}
+          {postsLoading ? (
+            <div className="profile-posts-loading">Загрузка...</div>
+          ) : userPosts.length > 0 ? (
+            userPosts.map(post => (
+              <div key={post.id} className="profile-post-card">
+                <div className="profile-post-header" onClick={() => navigate(`/profile/${post.authorId}`)} style={{ cursor: 'pointer' }}>
+                  <div className="profile-post-avatar">
+                    {getAuthorLetter(post.authorUsername)}
+                  </div>
+                  <div className="profile-post-meta">
+                    <div className="profile-post-author">{post.authorUsername || 'Пользователь'}</div>
+                    <div className="profile-post-date">
+                      {new Date(post.createdAt).toLocaleDateString('ru-RU', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  </div>
+                </div>
+                {post.content && (
+                  <div className="profile-post-content">{post.content}</div>
+                )}
+                {post.mediaUrl && post.mediaUrl.length > 0 && (
+                  <img src={post.mediaUrl[0]} alt="Post" className="profile-post-image" />
+                )}
+                <div className="profile-post-actions">
+                  <div 
+                    className={`profile-post-action ${post.isLikedByCurrentUser ? 'liked' : ''}`}
+                    onClick={() => handleLike(post.id, post.isLikedByCurrentUser)}
+                  >
+                    <img src="/like.png" alt="Like" className="profile-post-action-icon" />
+                    <span>{post.reactionsCount || 0}</span>
+                  </div>
+                  <div 
+                    className={`profile-post-action ${expandedComments === post.id ? 'active' : ''}`}
+                    onClick={() => toggleComments(post.id)}
+                  >
+                    <img src="/comment.png" alt="Comment" className="profile-post-action-icon" />
+                    <span>{post.commentsCount || 0}</span>
+                  </div>
+                </div>
+                
+                {/* Comments Section */}
+                {expandedComments === post.id && (
+                  <div className="comments-section">
+                    <div className="comment-input-wrapper">
+                      <input
+                        type="text"
+                        className="comment-input"
+                        placeholder="Написать комментарий..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSubmitComment(post.id)}
+                      />
+                      <button 
+                        className="comment-submit-btn"
+                        onClick={() => handleSubmitComment(post.id)}
+                        disabled={!newComment.trim() || isSubmittingComment}
+                      >
+                        {isSubmittingComment ? '...' : '→'}
+                      </button>
+                    </div>
+                    
+                    <div className="comments-list">
+                      {commentsLoading ? (
+                        <div className="comments-loading">Загрузка...</div>
+                      ) : comments.length > 0 ? (
+                        comments.map(comment => (
+                          <div key={comment.id} className="comment-item">
+                            <div 
+                              className="comment-avatar"
+                              onClick={() => navigate(`/profile/${comment.authorId}`)}
+                            >
+                              {comment.authorUsername?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                            <div className="comment-body">
+                              <span 
+                                className="comment-author"
+                                onClick={() => navigate(`/profile/${comment.authorId}`)}
+                              >
+                                {comment.authorUsername}
+                              </span>
+                              <span className="comment-text">{comment.content}</span>
+                              <span className="comment-time">
+                                {new Date(comment.createdAt).toLocaleDateString('ru-RU', {
+                                  day: 'numeric',
+                                  month: 'short'
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="no-comments">Комментариев пока нет</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="profile-posts-empty">Публикаций пока нет</div>
+          )}
         </div>
       </main>
     </div>
