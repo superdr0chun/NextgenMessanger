@@ -5,6 +5,7 @@
   min-height: 100vh;
   background: linear-gradient(360deg, rgba(217, 217, 217, 0.2) 0%, rgba(162, 163, 163, 0.8) 50%, #282728 100%);
   position: relative;
+  animation: fadeIn 0.3s ease-out;
 }
 
 /* ЧАТ-ЛИСТ */
@@ -22,6 +23,7 @@
   height: calc(100vh - 100px - 84px);
   box-sizing: border-box;
   overflow: hidden;
+  animation: slideInLeft 0.4s ease-out;
 }
 
 .search-header {
@@ -72,7 +74,11 @@
   padding: 12px;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.chat-item:active {
+  transform: scale(0.98);
 }
 
 .chat-item:hover {
@@ -138,6 +144,7 @@
   display: flex;
   flex-direction: column;
   height: calc(100vh - 100px - 84px);
+  animation: slideInRight 0.4s ease-out;
   opacity: 1;
   transform: translateX(0);
   box-sizing: border-box;
@@ -201,12 +208,20 @@
   flex-direction: column;
   gap: 12px;
   padding: 16px;
+  /* Hide scrollbar - scroll works from anywhere on page */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.messages::-webkit-scrollbar {
+  display: none;
 }
 
 .message-bubble {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  animation: fadeInUp 0.3s ease-out;
 }
 
 .message-bubble.own {

@@ -1,10 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './MainPage.css';
 import { authService } from '../services/authService';
 import { useUser } from '../context/UserContext';
 import UserSearch from './UserSearch';
 import { notificationService } from '../services/notificationService';
+import { chatService } from '../services/chatService';
+import { postService } from '../services/postService';
+import { reactionService } from '../services/reactionService';
+import { commentService } from '../services/commentService';
+import { userService } from '../services/userService';
 
 function MainPage() {
   const navigate = useNavigate();
@@ -12,7 +17,21 @@ function MainPage() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [recentChats, setRecentChats] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [newPostContent, setNewPostContent] = useState('');
+  const [isCreatingPost, setIsCreatingPost] = useState(false);
+  const [expandedComments, setExpandedComments] = useState(null); // postId of expanded comments
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [notificationUsers, setNotificationUsers] = useState({});
   const dropdownRef = useRef(null);
+  const notificationsRef = useRef(null);
   const searchInputRef = useRef(null);
   const searchContainerRef = useRef(null);
 
@@ -20,6 +39,9 @@ function MainPage() {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
       }
     };
 
@@ -48,8 +70,319 @@ function MainPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Helper function to extract user ID from notification
+  const getNotificationUserId = useCallback((notification) => {
+    if (notification.data) {
+      try {
+        const data = typeof notification.data === 'string' 
+          ? JSON.parse(notification.data) 
+          : notification.data;
+        return data.follower_id || data.followerId || data.user_id || data.userId || null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }, []);
+
+  // Load notifications
+  useEffect(() => {
+    if (!authService.isAuthenticated()) return;
+    
+    const loadNotifications = async () => {
+      try {
+        const data = await notificationService.getNotifications(1, 20);
+        const allNotifs = data.notifications || [];
+        // Filter out message notifications - they are shown in navigation
+        const notifs = allNotifs.filter(n => n.type !== 'new_message');
+        setNotifications(notifs);
+        // Count unread non-message notifications
+        const unreadNonMessage = notifs.filter(n => !n.isRead).length;
+        setUnreadNotificationsCount(unreadNonMessage);
+        
+        // Load user info for notifications that don't have username
+        const userIdsToLoad = [];
+        notifs.forEach(notification => {
+          const userId = getNotificationUserId(notification);
+          if (userId && !notificationUsers[userId]) {
+            // Check if username is already in notification data
+            try {
+              const notifData = typeof notification.data === 'string' 
+                ? JSON.parse(notification.data) 
+                : notification.data;
+              if (!notifData.follower_username && !notifData.followerUsername && !notifData.username) {
+                userIdsToLoad.push(userId);
+              }
+            } catch (e) {
+              userIdsToLoad.push(userId);
+            }
+          }
+        });
+        
+        // Load unique user IDs
+        const uniqueUserIds = [...new Set(userIdsToLoad)];
+        if (uniqueUserIds.length > 0) {
+          const usersInfo = {};
+          await Promise.all(uniqueUserIds.map(async (userId) => {
+            try {
+              const userInfo = await userService.getUserById(userId);
+              usersInfo[userId] = userInfo;
+            } catch (e) {
+              console.error('Error loading user:', userId, e);
+            }
+          }));
+          setNotificationUsers(prev => ({ ...prev, ...usersInfo }));
+        }
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+      }
+    };
+
+    loadNotifications();
+    // Refresh every 10 seconds
+    const interval = setInterval(loadNotifications, 10000);
+    return () => clearInterval(interval);
+  }, [getNotificationUserId, notificationUsers]);
+
+  // Load recent chats
+  useEffect(() => {
+    if (!authService.isAuthenticated()) return;
+    
+    const loadRecentChats = async () => {
+      try {
+        const chats = await chatService.getChats();
+        // Take only the first 5 most recent chats
+        setRecentChats(chats.slice(0, 5));
+      } catch (error) {
+        console.error('Error loading recent chats:', error);
+      }
+    };
+
+    loadRecentChats();
+  }, []);
+
+  // Load posts
+  useEffect(() => {
+    if (!authService.isAuthenticated()) return;
+    
+    const loadPosts = async () => {
+      try {
+        const postsData = await postService.getPosts(1, 20);
+        setPosts(Array.isArray(postsData) ? postsData : []);
+      } catch (error) {
+        console.error('Error loading posts:', error);
+      }
+    };
+
+    loadPosts();
+  }, []);
+
+  // Create new post
+  const handleCreatePost = async () => {
+    if (!newPostContent.trim()) return;
+    
+    setIsCreatingPost(true);
+    try {
+      await postService.createPost(newPostContent.trim());
+      setNewPostContent('');
+      // Reload posts from server to get the saved version
+      const postsData = await postService.getPosts(1, 20);
+      setPosts(Array.isArray(postsData) ? postsData : []);
+    } catch (error) {
+      console.error('Error creating post:', error);
+      alert('Не удалось создать пост');
+    } finally {
+      setIsCreatingPost(false);
+    }
+  };
+
+  // Handle like/unlike
+  const handleLike = async (postId, isCurrentlyLiked) => {
+    try {
+      await reactionService.toggleLike(postId, isCurrentlyLiked);
+      // Update the post in the local state
+      setPosts(prevPosts => prevPosts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            isLikedByCurrentUser: !isCurrentlyLiked,
+            reactionsCount: isCurrentlyLiked 
+              ? Math.max(0, (post.reactionsCount || 1) - 1) 
+              : (post.reactionsCount || 0) + 1
+          };
+        }
+        return post;
+      }));
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
+  };
+
+  // Toggle comments section
+  const toggleComments = async (postId) => {
+    if (expandedComments === postId) {
+      setExpandedComments(null);
+      setComments([]);
+      return;
+    }
+    
+    setExpandedComments(postId);
+    setCommentsLoading(true);
+    try {
+      const commentsData = await commentService.getComments(postId);
+      setComments(Array.isArray(commentsData) ? commentsData : []);
+    } catch (error) {
+      console.error('Error loading comments:', error);
+      setComments([]);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  // Submit new comment
+  const handleSubmitComment = async (postId) => {
+    if (!newComment.trim() || isSubmittingComment) return;
+    
+    setIsSubmittingComment(true);
+    try {
+      const comment = await commentService.createComment(postId, newComment.trim());
+      setComments(prev => [comment, ...prev]);
+      setNewComment('');
+      // Update comments count in post
+      setPosts(prevPosts => prevPosts.map(post => {
+        if (post.id === postId) {
+          return { ...post, commentsCount: (post.commentsCount || 0) + 1 };
+        }
+        return post;
+      }));
+    } catch (error) {
+      console.error('Error creating comment:', error);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  // Get first letter of username for avatar
+  const getAuthorLetter = (username) => {
+    return username ? username.charAt(0).toUpperCase() : '?';
+  };
+
+  // Helper function to get chat display name
+  const getChatDisplayName = (chat) => {
+    if (chat.title) {
+      return chat.title;
+    }
+    // For direct chats, show the other participant's name
+    if ((chat.type === 'Direct' || chat.type === 'direct') && chat.participants) {
+      const otherParticipant = chat.participants.find(p => p.userId !== user?.id);
+      if (otherParticipant) {
+        return otherParticipant.username;
+      }
+    }
+    return 'Чат';
+  };
+
+  // Get first letter for avatar
+  const getAvatarLetter = (chat) => {
+    const name = getChatDisplayName(chat);
+    return name.charAt(0).toUpperCase();
+  };
+
+  // Handle chat click - navigate to chat page
+  const handleChatClick = (chatId) => {
+    navigate(`/chat?id=${chatId}`);
+  };
+
   const handleAvatarClick = () => {
     setShowDropdown(!showDropdown);
+  };
+
+  const handleNotificationsClick = () => {
+    setShowNotifications(!showNotifications);
+  };
+
+  const handleNotificationClick = async (notification) => {
+    // Mark as read
+    if (!notification.isRead) {
+      try {
+        await notificationService.markAsRead(notification.id);
+        setNotifications(prev => prev.map(n => 
+          n.id === notification.id ? { ...n, isRead: true } : n
+        ));
+        setUnreadNotificationsCount(prev => Math.max(0, prev - 1));
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+      }
+    }
+
+    // Navigate based on notification type
+    if (notification.type === 'new_follower' && notification.data) {
+      try {
+        const data = typeof notification.data === 'string' 
+          ? JSON.parse(notification.data) 
+          : notification.data;
+        const followerId = data.follower_id || data.followerId;
+        if (followerId) {
+          setShowNotifications(false);
+          navigate(`/profile/${followerId}`);
+        }
+      } catch (e) {
+        console.error('Error parsing notification data:', e);
+      }
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadNotificationsCount(0);
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  };
+
+  const getNotificationText = (notification) => {
+    if (notification.type === 'new_follower') {
+      return 'подписался на вас';
+    }
+    if (notification.type === 'new_message') {
+      return 'отправил вам сообщение';
+    }
+    if (notification.type === 'new_comment') {
+      return 'прокомментировал ваш пост';
+    }
+    if (notification.type === 'new_like') {
+      return 'оценил ваш пост';
+    }
+    return 'новое уведомление';
+  };
+
+  const getNotificationUsername = (notification) => {
+    if (notification.data) {
+      try {
+        const data = typeof notification.data === 'string' 
+          ? JSON.parse(notification.data) 
+          : notification.data;
+        
+        // Try multiple property name variations
+        const username = data.follower_username || data.followerUsername || 
+                        data.username || data.user_name || data.userName;
+        
+        if (username) return username;
+        
+        // Try to get from cached users
+        const userId = data.follower_id || data.followerId || data.user_id || data.userId;
+        if (userId && notificationUsers[userId]) {
+          return notificationUsers[userId].username || notificationUsers[userId].userName || 'Пользователь';
+        }
+        
+        return 'Пользователь';
+      } catch (e) {
+        return 'Пользователь';
+      }
+    }
+    return 'Пользователь';
   };
 
   const handleLogout = async () => {
@@ -87,7 +420,57 @@ function MainPage() {
           )}
         </div>
         
-        <img src="/notifications.png" alt="Notifications" className="header-notifications-icon" />
+        <div className="header-notifications" ref={notificationsRef}>
+          <div className="header-notifications-btn" onClick={handleNotificationsClick}>
+            <img src="/notifications.png" alt="Notifications" className="header-notifications-icon" />
+            {unreadNotificationsCount > 0 && (
+              <span className="notifications-badge">{unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}</span>
+            )}
+          </div>
+          {showNotifications && (
+            <div className="notifications-dropdown">
+              <div className="notifications-header">
+                <span className="notifications-title">Уведомления</span>
+                {unreadNotificationsCount > 0 && (
+                  <button className="mark-all-read-btn" onClick={handleMarkAllAsRead}>
+                    Прочитать все
+                  </button>
+                )}
+              </div>
+              <div className="notifications-list">
+                {notifications.length > 0 ? (
+                  notifications.map(notification => (
+                    <div 
+                      key={notification.id} 
+                      className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <div className="notification-avatar">
+                        {getNotificationUsername(notification).charAt(0).toUpperCase()}
+                      </div>
+                      <div className="notification-content">
+                        <span className="notification-text">
+                          <strong>{getNotificationUsername(notification)}</strong> {getNotificationText(notification)}
+                        </span>
+                        <span className="notification-time">
+                          {new Date(notification.createdAt).toLocaleDateString('ru-RU', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      {!notification.isRead && <div className="notification-dot" />}
+                    </div>
+                  ))
+                ) : (
+                  <div className="no-notifications">Нет уведомлений</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
         {authService.isAuthenticated() ? (
           <div className="header-user-profile" ref={dropdownRef}>
             <img 
@@ -140,58 +523,144 @@ function MainPage() {
       
       <section className="recent-chats-section">
         <div className="recent-chats-container">
-          <div className="recent-chat-item">
-            <div className="recent-chat-avatar"></div>
-            <div className="recent-chat-name">Chat 1</div>
-          </div>
-          <div className="recent-chat-item">
-            <div className="recent-chat-avatar"></div>
-            <div className="recent-chat-name">Chat 2</div>
-          </div>
-          <div className="recent-chat-item">
-            <div className="recent-chat-avatar"></div>
-            <div className="recent-chat-name">Chat 3</div>
-          </div>
+          {recentChats.length > 0 ? (
+            recentChats.map(chat => (
+              <div 
+                key={chat.id} 
+                className="recent-chat-item"
+                onClick={() => handleChatClick(chat.id)}
+              >
+                <div className="recent-chat-avatar">
+                  {getAvatarLetter(chat)}
+                </div>
+                <div className="recent-chat-name">{getChatDisplayName(chat)}</div>
+              </div>
+            ))
+          ) : (
+            <div className="no-recent-chats">Нет чатов</div>
+          )}
         </div>
       </section>
       
       <section className="posts-feed">
         <div className="posts-container">
-          <div className="post-card">
-            <div className="post-header">
-              <img src="/images/authimage.png" alt="User Avatar" className="post-avatar" />
-              <div className="post-author-name">Имя Фамилия</div>
-            </div>
-            <div className="post-content">
-              <img src="/postimage.png" alt="Post" className="post-image" />
-              <div className="post-text">
-                Новый мерч от Nextgen уже в продаже! Вырази свой стиль и покажи свою принадлежность к современной молодёжи. Специальные дизайны и качество — делай свой образ ярким и уникальным!
-              </div>
-            </div>
-            <div className="post-actions">
-              <img src="/like.png" alt="Like" className="post-action-icon" />
-              <img src="/comment.png" alt="Comment" className="post-action-icon" />
-              <img src="/important.png" alt="Bookmark" className="post-action-icon" />
-            </div>
-          </div>
-          
-          <div className="post-card">
-            <div className="post-header">
-              <img src="/images/authimage.png" alt="User Avatar" className="post-avatar" />
-              <div className="post-author-name">Имя Фамилия</div>
-            </div>
-            <div className="post-content">
-              <img src="/postimage.png" alt="Post" className="post-image" />
-              <div className="post-text">
-                Новый мерч от Nextgen уже в продаже! Вырази свой стиль и покажи свою принадлежность к современной молодёжи. Специальные дизайны и качество — делай свой образ ярким и уникальным!
-              </div>
-            </div>
-            <div className="post-actions">
-              <img src="/like.png" alt="Like" className="post-action-icon" />
-              <img src="/comment.png" alt="Comment" className="post-action-icon" />
-              <img src="/important.png" alt="Bookmark" className="post-action-icon" />
+          {/* Create Post Form */}
+          <div className="create-post-card">
+            <textarea
+              className="create-post-input"
+              placeholder="Что у вас нового?"
+              value={newPostContent}
+              onChange={(e) => setNewPostContent(e.target.value)}
+              rows={2}
+            />
+            <div className="create-post-actions">
+              <button 
+                className="create-post-btn"
+                onClick={handleCreatePost}
+                disabled={!newPostContent.trim() || isCreatingPost}
+              >
+                {isCreatingPost ? '...' : 'Опубликовать'}
+              </button>
             </div>
           </div>
+
+          {/* Posts List */}
+          {posts.length > 0 ? (
+            posts.map(post => (
+              <div key={post.id} className="post-card">
+                <div className="post-header" onClick={() => navigate(`/profile/${post.authorId}`)} style={{ cursor: 'pointer' }}>
+                  <div className="post-avatar-letter">
+                    {getAuthorLetter(post.authorUsername)}
+                  </div>
+                  <div className="post-author-name">{post.authorUsername || 'Пользователь'}</div>
+                </div>
+                <div className="post-content">
+                  {post.mediaUrl && post.mediaUrl.length > 0 && (
+                    <img src={post.mediaUrl[0]} alt="Post" className="post-image" />
+                  )}
+                  {post.content && (
+                    <div className="post-text">{post.content}</div>
+                  )}
+                </div>
+                <div className="post-actions">
+                  <div 
+                    className={`post-action ${post.isLikedByCurrentUser ? 'liked' : ''}`}
+                    onClick={() => handleLike(post.id, post.isLikedByCurrentUser)}
+                  >
+                    <img src="/like.png" alt="Like" className="post-action-icon" />
+                    <span>{post.reactionsCount || 0}</span>
+                  </div>
+                  <div 
+                    className={`post-action ${expandedComments === post.id ? 'active' : ''}`}
+                    onClick={() => toggleComments(post.id)}
+                  >
+                    <img src="/comment.png" alt="Comment" className="post-action-icon" />
+                    <span>{post.commentsCount || 0}</span>
+                  </div>
+                  <img src="/important.png" alt="Bookmark" className="post-action-icon" />
+                </div>
+                
+                {/* Comments Section */}
+                {expandedComments === post.id && (
+                  <div className="comments-section">
+                    <div className="comment-input-wrapper">
+                      <input
+                        type="text"
+                        className="comment-input"
+                        placeholder="Написать комментарий..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSubmitComment(post.id)}
+                      />
+                      <button 
+                        className="comment-submit-btn"
+                        onClick={() => handleSubmitComment(post.id)}
+                        disabled={!newComment.trim() || isSubmittingComment}
+                      >
+                        {isSubmittingComment ? '...' : '→'}
+                      </button>
+                    </div>
+                    
+                    <div className="comments-list">
+                      {commentsLoading ? (
+                        <div className="comments-loading">Загрузка...</div>
+                      ) : comments.length > 0 ? (
+                        comments.map(comment => (
+                          <div key={comment.id} className="comment-item">
+                            <div 
+                              className="comment-avatar"
+                              onClick={() => navigate(`/profile/${comment.authorId}`)}
+                            >
+                              {comment.authorUsername?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                            <div className="comment-body">
+                              <span 
+                                className="comment-author"
+                                onClick={() => navigate(`/profile/${comment.authorId}`)}
+                              >
+                                {comment.authorUsername}
+                              </span>
+                              <span className="comment-text">{comment.content}</span>
+                              <span className="comment-time">
+                                {new Date(comment.createdAt).toLocaleDateString('ru-RU', {
+                                  day: 'numeric',
+                                  month: 'short'
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="no-comments">Комментариев пока нет</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="no-posts">Постов пока нет. Будьте первым!</div>
+          )}
         </div>
       </section>
       
