@@ -7,23 +7,25 @@ using NextgenMessanger.Core.DTOs.Profile;
 namespace NextgenMessanger.API.Controllers;
 
 [ApiController]
-[Route("api/users/{userId}/profile")]
+[Route("api/users/{username}/profile")]
 [Authorize]
 public class ProfilesController : ControllerBase
 {
     private readonly IProfileService _profileService;
+    private readonly IUserService _userService;
     private readonly IWebHostEnvironment _environment;
 
-    public ProfilesController(IProfileService profileService, IWebHostEnvironment environment)
+    public ProfilesController(IProfileService profileService, IUserService userService, IWebHostEnvironment environment)
     {
         _profileService = profileService;
+        _userService = userService;
         _environment = environment;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetProfile(Guid userId)
+    public async Task<IActionResult> GetProfile(string username)
     {
-        var profile = await _profileService.GetProfileByUserIdAsync(userId);
+        var profile = await _profileService.GetProfileByUsernameAsync(username);
         if (profile == null)
         {
             return NotFound();
@@ -33,22 +35,28 @@ public class ProfilesController : ControllerBase
     }
 
     [HttpPatch]
-    public async Task<IActionResult> UpdateProfile(Guid userId, [FromBody] UpdateProfileDto updateDto)
+    public async Task<IActionResult> UpdateProfile(string username, [FromBody] UpdateProfileDto updateDto)
     {
+        var user = await _userService.GetByUsernameAsync(username);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var currentUserId))
         {
             return Unauthorized();
         }
 
-        if (currentUserId != userId)
+        if (currentUserId != user.Id)
         {
             return Forbid();
         }
 
         try
         {
-            var profile = await _profileService.UpdateProfileAsync(userId, updateDto);
+            var profile = await _profileService.UpdateProfileAsync(user.Id, updateDto);
             return Ok(profile);
         }
         catch (KeyNotFoundException)
@@ -58,15 +66,21 @@ public class ProfilesController : ControllerBase
     }
 
     [HttpPost("avatar")]
-    public async Task<IActionResult> UploadAvatar(Guid userId, IFormFile file)
+    public async Task<IActionResult> UploadAvatar(string username, IFormFile file)
     {
+        var user = await _userService.GetByUsernameAsync(username);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var currentUserId))
         {
             return Unauthorized();
         }
 
-        if (currentUserId != userId)
+        if (currentUserId != user.Id)
         {
             return Forbid();
         }
@@ -76,43 +90,38 @@ public class ProfilesController : ControllerBase
             return BadRequest("No file uploaded");
         }
 
-        // Validate file type
         var allowedTypes = new[] { "image/jpeg", "image/png", "image/gif", "image/webp" };
         if (!allowedTypes.Contains(file.ContentType.ToLower()))
         {
             return BadRequest("Invalid file type. Only JPEG, PNG, GIF and WebP are allowed.");
         }
 
-        // Validate file size (max 5MB)
-        if (file.Length > 5 * 1024 * 1024)
+        const int maxFileSizeBytes = 5 * 1024 * 1024;
+        if (file.Length > maxFileSizeBytes)
         {
             return BadRequest("File too large. Maximum size is 5MB.");
         }
 
         try
         {
-            // Create avatars directory if it doesn't exist
             var avatarsPath = Path.Combine(_environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot"), "avatars");
             if (!Directory.Exists(avatarsPath))
             {
                 Directory.CreateDirectory(avatarsPath);
             }
 
-            // Generate unique filename
             var fileExtension = Path.GetExtension(file.FileName);
-            var fileName = $"{userId}_{DateTime.UtcNow.Ticks}{fileExtension}";
+            var fileName = $"{user.Id}_{DateTime.UtcNow.Ticks}{fileExtension}";
             var filePath = Path.Combine(avatarsPath, fileName);
 
-            // Save file
             using (var stream = new FileStream(filePath, FileMode.Create))
             {
                 await file.CopyToAsync(stream);
             }
 
-            // Update profile with new avatar URL
             var avatarUrl = $"/avatars/{fileName}";
             var updateDto = new UpdateProfileDto { AvatarUrl = avatarUrl };
-            var profile = await _profileService.UpdateProfileAsync(userId, updateDto);
+            var profile = await _profileService.UpdateProfileAsync(user.Id, updateDto);
 
             return Ok(new { avatarUrl = avatarUrl, profile = profile });
         }

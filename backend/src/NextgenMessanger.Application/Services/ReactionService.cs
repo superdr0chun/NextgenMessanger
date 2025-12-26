@@ -18,7 +18,6 @@ public class ReactionService : IReactionService
 
     public async Task<ReactionDto> AddReactionAsync(Guid postId, Guid userId, CreateReactionDto createDto)
     {
-        // Check for any existing reaction (including deleted ones) due to unique constraint
         var existingReaction = await _context.Reactions
             .Include(r => r.User)
                 .ThenInclude(u => u.Profile)
@@ -26,7 +25,6 @@ public class ReactionService : IReactionService
 
         if (existingReaction != null)
         {
-            // If already active with same type, just return it
             if (!existingReaction.Deleted && existingReaction.Type == createDto.Type)
             {
                 return new ReactionDto
@@ -41,7 +39,6 @@ public class ReactionService : IReactionService
                 };
             }
 
-            // Reactivate or update existing reaction
             existingReaction.Type = createDto.Type;
             existingReaction.UpdatedAt = DateTime.UtcNow;
             existingReaction.Deleted = false;
@@ -51,7 +48,6 @@ public class ReactionService : IReactionService
         }
         else
         {
-            // Create new reaction
             var reaction = new Core.Entities.Reaction
             {
                 Id = Guid.NewGuid(),
@@ -71,7 +67,6 @@ public class ReactionService : IReactionService
                     .ThenInclude(u => u.Profile)
                 .FirstAsync(r => r.Id == reaction.Id);
 
-            // Создать уведомление для автора поста (если это не его собственный пост)
             var post = await _context.Posts
                 .FirstOrDefaultAsync(p => p.Id == postId && !p.Deleted);
             

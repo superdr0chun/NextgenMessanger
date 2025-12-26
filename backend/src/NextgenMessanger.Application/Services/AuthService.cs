@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using NextgenMessanger.Application.Interfaces;
+using NextgenMessanger.Core.Constants;
 using NextgenMessanger.Core.DTOs.Auth;
 using NextgenMessanger.Core.DTOs.User;
 using NextgenMessanger.Core.Entities;
@@ -11,11 +13,13 @@ public class AuthService : IAuthService
 {
     private readonly ApplicationDbContext _context;
     private readonly IJwtService _jwtService;
+    private readonly IConfiguration _configuration;
 
-    public AuthService(ApplicationDbContext context, IJwtService jwtService)
+    public AuthService(ApplicationDbContext context, IJwtService jwtService, IConfiguration configuration)
     {
         _context = context;
         _jwtService = jwtService;
+        _configuration = configuration;
     }
 
     public async Task<UserDto> RegisterAsync(RegisterDto registerDto)
@@ -39,7 +43,7 @@ public class AuthService : IAuthService
             Username = registerDto.Username,
             PasswordHash = passwordHash,
             FullName = registerDto.FullName,
-            Status = "active",
+            Status = UserConstants.StatusActive,
             EmailVerified = false,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -82,12 +86,22 @@ public class AuthService : IAuthService
         var accessToken = _jwtService.GenerateAccessToken(user);
         var refreshToken = _jwtService.GenerateRefreshToken();
 
+        var refreshTokenExpirationDaysStr = _configuration["Jwt:RefreshExpirationDays"];
+        var refreshTokenExpirationDays = int.TryParse(refreshTokenExpirationDaysStr, out var refreshDays) 
+            ? refreshDays 
+            : TimeConstants.RefreshTokenExpirationDays;
+        
+        var accessTokenExpirationMinutesStr = _configuration["Jwt:ExpirationMinutes"];
+        var accessTokenExpirationMinutes = int.TryParse(accessTokenExpirationMinutesStr, out var accessMinutes) 
+            ? accessMinutes 
+            : TimeConstants.AccessTokenExpirationMinutes;
+
         var refreshTokenEntity = new RefreshToken
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
             Token = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            ExpiresAt = DateTime.UtcNow.AddDays(refreshTokenExpirationDays),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             Deleted = false
@@ -100,7 +114,7 @@ public class AuthService : IAuthService
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(15)
+            ExpiresAt = DateTime.UtcNow.AddMinutes(accessTokenExpirationMinutes)
         };
     }
 
@@ -130,12 +144,22 @@ public class AuthService : IAuthService
         var newAccessToken = _jwtService.GenerateAccessToken(user);
         var newRefreshToken = _jwtService.GenerateRefreshToken();
 
+        var refreshTokenExpirationDaysStr = _configuration["Jwt:RefreshExpirationDays"];
+        var refreshTokenExpirationDays = int.TryParse(refreshTokenExpirationDaysStr, out var refreshDays) 
+            ? refreshDays 
+            : TimeConstants.RefreshTokenExpirationDays;
+        
+        var accessTokenExpirationMinutesStr = _configuration["Jwt:ExpirationMinutes"];
+        var accessTokenExpirationMinutes = int.TryParse(accessTokenExpirationMinutesStr, out var accessMinutes) 
+            ? accessMinutes 
+            : TimeConstants.AccessTokenExpirationMinutes;
+
         var newRefreshTokenEntity = new RefreshToken
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
             Token = newRefreshToken,
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            ExpiresAt = DateTime.UtcNow.AddDays(refreshTokenExpirationDays),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             Deleted = false
@@ -148,7 +172,7 @@ public class AuthService : IAuthService
         {
             AccessToken = newAccessToken,
             RefreshToken = newRefreshToken,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(15)
+            ExpiresAt = DateTime.UtcNow.AddMinutes(accessTokenExpirationMinutes)
         };
     }
 

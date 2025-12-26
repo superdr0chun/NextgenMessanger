@@ -126,7 +126,6 @@ public class ChatService : IChatService
                 .Where(cp => cp.ChatId == chat.Id && !cp.Deleted && cp.LeftAt == null)
                 .ToListAsync();
 
-            // Calculate unread count for current user
             var currentParticipant = participants.FirstOrDefault(p => p.UserId == userId);
             var lastReadAt = currentParticipant?.LastReadAt;
             
@@ -194,7 +193,6 @@ public class ChatService : IChatService
             .Where(cp => cp.ChatId == chatId && !cp.Deleted && cp.LeftAt == null)
             .ToListAsync();
 
-        // Calculate unread count for current user
         var currentParticipant = participants.FirstOrDefault(p => p.UserId == userId);
         var lastReadAt = currentParticipant?.LastReadAt;
         
@@ -420,7 +418,6 @@ public class ChatService : IChatService
             throw new KeyNotFoundException("Chat not found");
         }
 
-        // Check if user is a participant
         var participant = chat.Participants
             .FirstOrDefault(p => p.UserId == userId && !p.Deleted && p.LeftAt == null);
 
@@ -431,19 +428,15 @@ public class ChatService : IChatService
 
         if (forEveryone)
         {
-            // Delete for everyone
-            // For group chats, only owner can delete for everyone
             if (chat.Type == ChatType.Group && participant.Role != ChatParticipantRole.Owner)
             {
                 throw new UnauthorizedAccessException("Only owners can delete group chats for everyone");
             }
 
-            // Soft delete the chat
             chat.Deleted = true;
             chat.DeletedAt = DateTime.UtcNow;
             chat.UpdatedAt = DateTime.UtcNow;
 
-            // Mark all participants as left
             foreach (var p in chat.Participants.Where(p => !p.Deleted && p.LeftAt == null))
             {
                 p.LeftAt = DateTime.UtcNow;
@@ -452,7 +445,6 @@ public class ChatService : IChatService
         }
         else
         {
-            // Delete only for this user (leave chat)
             participant.LeftAt = DateTime.UtcNow;
             participant.UpdatedAt = DateTime.UtcNow;
         }

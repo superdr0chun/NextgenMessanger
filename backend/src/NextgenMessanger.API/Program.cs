@@ -73,10 +73,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// Repositories
 builder.Services.AddScoped<IPostRepository, PostRepository>();
 
-// Services
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
@@ -89,11 +87,16 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IChatMessageService, ChatMessageService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+var defaultAllowedOrigins = new[] { "http://localhost:3000" };
+
 builder.Services.AddCors(options =>
 {
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+        ?? defaultAllowedOrigins;
+    
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -110,8 +113,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowReactApp");
-
-// Serve static files (avatars, etc.)
 app.UseStaticFiles();
 
 app.UseAuthentication();
