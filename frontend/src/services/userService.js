@@ -16,5 +16,10 @@ export const userService = {
     const response = await api.get(`/users/${userId}`);
     return response.data;
   },
+
+  async getUserByUsername(username) {
+    const response = await api.get(`/users/${username}`);
+    return response.data;
+  },
 };
 

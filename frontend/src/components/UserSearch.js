@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userService } from '../services/userService';
 import './UserSearch.css';
+import { STATIC_BASE_URL } from '../config/constants';
 
 const UserSearch = ({ searchQuery, onClose, searchInputRef }) => {
   const navigate = useNavigate();
@@ -69,9 +70,9 @@ const UserSearch = ({ searchQuery, onClose, searchInputRef }) => {
     };
   }, [onClose, searchInputRef]);
 
-  const handleUserClick = (userId) => {
-    console.log('User clicked, userId:', userId);
-    navigate(`/profile/${userId}`);
+  const handleUserClick = (user) => {
+    console.log('User clicked, user:', user);
+    navigate(`/profile/${user.username || user.id}`);
     onClose();
   };
 
@@ -99,11 +100,11 @@ const UserSearch = ({ searchQuery, onClose, searchInputRef }) => {
             <div
               key={userId}
               className="user-search-result-item"
-              onClick={() => handleUserClick(userId)}
+              onClick={() => handleUserClick(user)}
             >
               {user.avatarUrl ? (
                 <img
-                  src={`http://localhost:5002${user.avatarUrl}`}
+                  src={`${STATIC_BASE_URL}${user.avatarUrl}`}
                   alt={user.fullName || user.username}
                   className="user-search-avatar"
                 />
