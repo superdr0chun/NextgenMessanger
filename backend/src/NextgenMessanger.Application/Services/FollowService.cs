@@ -62,11 +62,31 @@ public class FollowService : IFollowService
                 existingFollow.Status = FollowStatus.Accepted;
                 existingFollow.UpdatedAt = DateTime.UtcNow;
 
-                // Если подписка была удалена и теперь восстанавливается, создать уведомление
-                await _notificationService.CreateNotificationAsync(
-                    followeeId,
-                    "new_follower",
-                    new { follower_id = followerId.ToString() });
+                // Проверяем, есть ли уже недавнее уведомление от этого подписчика (в течение 24 часов)
+                // чтобы избежать спама при повторных подписках/отписках
+                var followerIdStr = followerId.ToString();
+                var cutoffTime = DateTime.UtcNow.AddHours(-24);
+                var recentNotifications = await _context.Notifications
+                    .Where(n => n.UserId == followeeId 
+                        && n.Type == "new_follower" 
+                        && n.CreatedAt > cutoffTime
+                        && !n.Deleted)
+                    .Select(n => n.Data)
+                    .ToListAsync();
+
+                var recentNotificationExists = recentNotifications
+                    .Any(data => data != null && data.Contains(followerIdStr));
+
+                if (!recentNotificationExists)
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        followeeId,
+                        "new_follower",
+                        new { 
+                            follower_id = followerIdStr,
+                            follower_username = existingFollow.Follower.Username
+                        });
+                }
             }
         }
         else
@@ -93,10 +113,30 @@ public class FollowService : IFollowService
                 .FirstAsync(f => f.Id == follow.Id);
 
             // Создать уведомление для пользователя, на которого подписались
-            await _notificationService.CreateNotificationAsync(
-                followeeId,
-                "new_follower",
-                new { follower_id = followerId.ToString() });
+            // Проверяем, есть ли уже недавнее уведомление от этого подписчика
+            var followerIdStr = followerId.ToString();
+            var cutoffTime = DateTime.UtcNow.AddHours(-24);
+            var recentNotifications = await _context.Notifications
+                .Where(n => n.UserId == followeeId 
+                    && n.Type == "new_follower" 
+                    && n.CreatedAt > cutoffTime
+                    && !n.Deleted)
+                .Select(n => n.Data)
+                .ToListAsync();
+
+            var recentNotificationExists = recentNotifications
+                .Any(data => data != null && data.Contains(followerIdStr));
+
+            if (!recentNotificationExists)
+            {
+                await _notificationService.CreateNotificationAsync(
+                    followeeId,
+                    "new_follower",
+                    new { 
+                        follower_id = followerIdStr,
+                        follower_username = existingFollow.Follower.Username
+                    });
+            }
         }
 
         await _context.SaveChangesAsync();

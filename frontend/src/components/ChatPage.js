@@ -10,6 +10,7 @@ import { chatService } from '../services/chatService';
 import { followService } from '../services/followService';
 import { notificationService } from '../services/notificationService';
 import { userService } from '../services/userService';
+import api from '../services/api';
 
 const ChatPage = () => {
   const navigate = useNavigate();
@@ -34,12 +35,25 @@ const ChatPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [notificationUsers, setNotificationUsers] = useState({});
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [pinnedChats, setPinnedChats] = useState([]);
+  const [chatMenuOpen, setChatMenuOpen] = useState(null); // chat id of open menu
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [selectedParticipants, setSelectedParticipants] = useState([]);
+  const [groupSearchQuery, setGroupSearchQuery] = useState('');
+  const [groupSearchResults, setGroupSearchResults] = useState([]);
+  const [groupSearchLoading, setGroupSearchLoading] = useState(false);
   const dropdownRef = useRef(null);
+  const createGroupModalRef = useRef(null);
   const notificationsRef = useRef(null);
   const searchInputRef = useRef(null);
   const searchContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const shouldScrollToBottom = useRef(true);
+  const prevMessagesLength = useRef(0);
+  const chatMenuRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -49,12 +63,24 @@ const ChatPage = () => {
       if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
         setShowNotifications(false);
       }
+      if (chatMenuRef.current && !chatMenuRef.current.contains(event.target)) {
+        setChatMenuOpen(null);
+      }
+      if (createGroupModalRef.current && !createGroupModalRef.current.contains(event.target)) {
+        setShowCreateGroupModal(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, []);
+
+  // Load pinned chats from localStorage
+  useEffect(() => {
+    const pinned = chatService.getPinnedChats();
+    setPinnedChats(pinned);
   }, []);
 
   // Helper function to extract user ID from notification
@@ -87,21 +113,13 @@ const ChatPage = () => {
         const unreadNonMessage = notifs.filter(n => !n.isRead).length;
         setUnreadNotificationsCount(unreadNonMessage);
         
-        // Load user info for notifications that don't have username
+        // Load user info and avatars for notifications
         const userIdsToLoad = [];
         notifs.forEach(notification => {
           const notifUserId = getNotificationUserId(notification);
-          if (notifUserId && !notificationUsers[notifUserId]) {
-            try {
-              const notifData = typeof notification.data === 'string' 
-                ? JSON.parse(notification.data) 
-                : notification.data;
-              if (!notifData.follower_username && !notifData.followerUsername && !notifData.username) {
-                userIdsToLoad.push(notifUserId);
-              }
-            } catch (e) {
-              userIdsToLoad.push(notifUserId);
-            }
+          // Load if we don't have this user OR if we have user but no avatar
+          if (notifUserId && (!notificationUsers[notifUserId] || !notificationUsers[notifUserId].avatarUrl)) {
+            userIdsToLoad.push(notifUserId);
           }
         });
         
@@ -111,7 +129,29 @@ const ChatPage = () => {
           const usersInfo = {};
           await Promise.all(uniqueUserIds.map(async (id) => {
             try {
-              const userInfo = await userService.getUserById(id);
+              // Start with existing user info if we have it
+              let userInfo = notificationUsers[id] ? { ...notificationUsers[id] } : {};
+              
+              // Try to load user info if we don't have it
+              if (!userInfo.username) {
+                try {
+                  const fetchedUser = await userService.getUserById(id);
+                  userInfo = { ...userInfo, ...fetchedUser };
+                } catch (e) {
+                  console.error('Error loading user:', id, e);
+                }
+              }
+              
+              // Always try to load avatar from profile
+              try {
+                const profileResponse = await api.get(`/users/${id}/profile`);
+                if (profileResponse.data?.avatarUrl) {
+                  userInfo.avatarUrl = profileResponse.data.avatarUrl;
+                }
+              } catch (e) {
+                // Profile might not exist, that's ok
+              }
+              
               usersInfo[id] = userInfo;
             } catch (e) {
               console.error('Error loading user:', id, e);
@@ -237,6 +277,24 @@ const ChatPage = () => {
     return () => clearInterval(interval);
   }, [user?.id]);
 
+  // Load user avatar
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const loadUserAvatar = async () => {
+      try {
+        const response = await api.get(`/users/${user.id}/profile`);
+        if (response.data?.avatarUrl) {
+          setAvatarUrl(response.data.avatarUrl);
+        }
+      } catch (error) {
+        console.error('Error loading user avatar:', error);
+      }
+    };
+
+    loadUserAvatar();
+  }, [user?.id]);
+
   useEffect(() => {
     if (activeChat?.id) {
       const loadMessages = async () => {
@@ -288,20 +346,38 @@ const ChatPage = () => {
     }
   }, [activeChat?.id]); // Only reload when chat ID changes
 
+  // Scroll to bottom only on initial load or when user sends a message
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (shouldScrollToBottom.current && messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    prevMessagesLength.current = messages.length;
   }, [messages]);
+
+  // Reset scroll flag when chat changes
+  useEffect(() => {
+    shouldScrollToBottom.current = true;
+  }, [activeChat?.id]);
 
   // Forward wheel events from anywhere on page to messages container
   useEffect(() => {
     const handleWheel = (e) => {
       if (messagesContainerRef.current && activeChat) {
-        // Prevent default only if we're scrolling the messages
         const messagesEl = messagesContainerRef.current;
         const isAtTop = messagesEl.scrollTop === 0;
-        const isAtBottom = messagesEl.scrollTop + messagesEl.clientHeight >= messagesEl.scrollHeight;
+        const isAtBottom = messagesEl.scrollTop + messagesEl.clientHeight >= messagesEl.scrollHeight - 10;
         
-        // If there's room to scroll in the direction of the wheel event, do it
+        // If user scrolls up, disable auto-scroll
+        if (e.deltaY < 0) {
+          shouldScrollToBottom.current = false;
+        }
+        
+        // If user scrolls to bottom, enable auto-scroll again
+        if (isAtBottom && e.deltaY > 0) {
+          shouldScrollToBottom.current = true;
+        }
+        
+        // Forward scroll to messages container
         if ((e.deltaY > 0 && !isAtBottom) || (e.deltaY < 0 && !isAtTop)) {
           messagesEl.scrollTop += e.deltaY;
         }
@@ -404,6 +480,30 @@ const ChatPage = () => {
     return 'Пользователь';
   };
 
+  const getNotificationAvatarUrl = (notification) => {
+    if (notification.data) {
+      try {
+        const data = typeof notification.data === 'string' 
+          ? JSON.parse(notification.data) 
+          : notification.data;
+        
+        // Try to get avatar from notification data
+        if (data.avatarUrl || data.avatar_url) {
+          return data.avatarUrl || data.avatar_url;
+        }
+        
+        // Try to get from cached users
+        const notifUserId = data.follower_id || data.followerId || data.user_id || data.userId;
+        if (notifUserId && notificationUsers[notifUserId]?.avatarUrl) {
+          return notificationUsers[notifUserId].avatarUrl;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    return null;
+  };
+
   const handleLogout = async () => {
     await authService.logout();
     clearUser();
@@ -425,13 +525,19 @@ const ChatPage = () => {
     return 'Chat';
   };
 
+  // Helper function to get other participant
+  const getOtherParticipant = (chat) => {
+    if ((chat.type === 'Direct' || chat.type === 'direct') && chat.participants) {
+      return chat.participants.find(p => p.userId !== user?.id);
+    }
+    return null;
+  };
+
   // Helper function to get chat avatar
   const getChatAvatar = (chat) => {
-    if ((chat.type === 'Direct' || chat.type === 'direct') && chat.participants) {
-      const otherParticipant = chat.participants.find(p => p.userId !== user?.id);
-      if (otherParticipant?.avatarUrl) {
-        return otherParticipant.avatarUrl;
-      }
+    const otherParticipant = getOtherParticipant(chat);
+    if (otherParticipant?.avatarUrl) {
+      return otherParticipant.avatarUrl;
     }
     return null;
   };
@@ -464,10 +570,19 @@ const ChatPage = () => {
     return 'Нет сообщений';
   };
 
-  const filteredChats = chats.filter(chat => {
-    const name = getChatDisplayName(chat).toLowerCase();
-    return name.includes(chatSearchQuery.toLowerCase());
-  });
+  const filteredChats = chats
+    .filter(chat => {
+      const name = getChatDisplayName(chat).toLowerCase();
+      return name.includes(chatSearchQuery.toLowerCase());
+    })
+    .sort((a, b) => {
+      // Pinned chats first
+      const aPinned = pinnedChats.includes(a.id);
+      const bPinned = pinnedChats.includes(b.id);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return 0;
+    });
 
   // Filter contacts (followers/following) by search query
   const filteredContacts = chatSearchQuery.trim().length > 0
@@ -491,6 +606,66 @@ const ChatPage = () => {
     } catch (error) {
       console.error('Error marking chat as read:', error);
     }
+  };
+
+  const handleChatMenuClick = (e, chatId) => {
+    e.stopPropagation();
+    setChatMenuOpen(chatMenuOpen === chatId ? null : chatId);
+  };
+
+  const handlePinChat = (e, chatId) => {
+    e.stopPropagation();
+    if (pinnedChats.includes(chatId)) {
+      chatService.unpinChat(chatId);
+      setPinnedChats(pinnedChats.filter(id => id !== chatId));
+    } else {
+      chatService.pinChat(chatId);
+      setPinnedChats([...pinnedChats, chatId]);
+    }
+    setChatMenuOpen(null);
+  };
+
+  const handleDeleteChatForMe = async (e, chatId) => {
+    e.stopPropagation();
+    try {
+      await chatService.deleteChat(chatId, false);
+      setChats(chats.filter(c => c.id !== chatId));
+      if (activeChat?.id === chatId) {
+        setActiveChat(null);
+      }
+      // Also remove from pinned if it was pinned
+      if (pinnedChats.includes(chatId)) {
+        chatService.unpinChat(chatId);
+        setPinnedChats(pinnedChats.filter(id => id !== chatId));
+      }
+    } catch (error) {
+      console.error('Error deleting chat:', error);
+    }
+    setChatMenuOpen(null);
+  };
+
+  const handleDeleteChatForEveryone = async (e, chatId) => {
+    e.stopPropagation();
+    try {
+      await chatService.deleteChat(chatId, true);
+      setChats(chats.filter(c => c.id !== chatId));
+      if (activeChat?.id === chatId) {
+        setActiveChat(null);
+      }
+      // Also remove from pinned if it was pinned
+      if (pinnedChats.includes(chatId)) {
+        chatService.unpinChat(chatId);
+        setPinnedChats(pinnedChats.filter(id => id !== chatId));
+      }
+    } catch (error) {
+      console.error('Error deleting chat:', error);
+    }
+    setChatMenuOpen(null);
+  };
+
+  // Helper to check if chat is direct (1-on-1)
+  const isDirectChat = (chat) => {
+    return chat?.type === 'Direct' || chat?.type === 'direct';
   };
 
   const handleContactClick = async (contact) => {
@@ -551,12 +726,82 @@ const ChatPage = () => {
     }
   };
 
+  // Group chat creation functions
+  const handleGroupSearch = async (query) => {
+    setGroupSearchQuery(query);
+    if (!query.trim()) {
+      setGroupSearchResults([]);
+      return;
+    }
+
+    setGroupSearchLoading(true);
+    try {
+      const results = await userService.searchUsers(query);
+      // Filter out already selected participants and current user
+      const filtered = results.filter(
+        u => u.id !== user?.id && !selectedParticipants.some(p => p.id === u.id)
+      );
+      setGroupSearchResults(filtered);
+    } catch (error) {
+      console.error('Error searching users:', error);
+    } finally {
+      setGroupSearchLoading(false);
+    }
+  };
+
+  const handleAddParticipant = (participant) => {
+    setSelectedParticipants([...selectedParticipants, participant]);
+    setGroupSearchQuery('');
+    setGroupSearchResults([]);
+  };
+
+  const handleRemoveParticipant = (participantId) => {
+    setSelectedParticipants(selectedParticipants.filter(p => p.id !== participantId));
+  };
+
+  const handleCreateGroup = async () => {
+    if (selectedParticipants.length < 2) {
+      alert('Выберите минимум 2 участников для создания беседы');
+      return;
+    }
+
+    if (!groupName.trim()) {
+      alert('Введите название беседы');
+      return;
+    }
+
+    try {
+      const participantIds = selectedParticipants.map(p => p.id);
+      const newChat = await chatService.createChat(participantIds, 'Group', groupName.trim());
+      
+      // Reload chats
+      const chatsData = await chatService.getChats();
+      setChats(chatsData);
+      
+      // Open new chat
+      const reloadedChat = chatsData.find(chat => chat.id === newChat.id) || newChat;
+      setActiveChat(reloadedChat);
+      setMessages([]);
+      
+      // Close modal and reset
+      setShowCreateGroupModal(false);
+      setGroupName('');
+      setSelectedParticipants([]);
+      setGroupSearchQuery('');
+      setGroupSearchResults([]);
+    } catch (error) {
+      console.error('Error creating group:', error);
+      alert('Ошибка при создании беседы');
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !activeChat) return;
 
     const messageContent = newMessage.trim();
     setNewMessage(''); // Clear input immediately for better UX
+    shouldScrollToBottom.current = true; // Scroll to bottom when user sends a message
 
     try {
       // Send message
@@ -646,9 +891,17 @@ const ChatPage = () => {
                       className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
                       onClick={() => handleNotificationClick(notification)}
                     >
-                      <div className="notification-avatar">
-                        {getNotificationUsername(notification).charAt(0).toUpperCase()}
-                      </div>
+                      {getNotificationAvatarUrl(notification) ? (
+                        <img 
+                          src={`http://localhost:5002${getNotificationAvatarUrl(notification)}`}
+                          alt=""
+                          className="notification-avatar"
+                        />
+                      ) : (
+                        <div className="notification-avatar notification-avatar-letter">
+                          {getNotificationUsername(notification).charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <div className="notification-content">
                         <span className="notification-text">
                           <strong>{getNotificationUsername(notification)}</strong> {getNotificationText(notification)}
@@ -674,12 +927,21 @@ const ChatPage = () => {
         </div>
         {authService.isAuthenticated() ? (
           <div className="header-user-profile" ref={dropdownRef}>
-            <img 
-              src="/images/authimage.png" 
-              alt="User Avatar" 
-              className="header-user-avatar" 
-              onClick={handleAvatarClick}
-            />
+            {avatarUrl ? (
+              <img 
+                src={`http://localhost:5002${avatarUrl}`} 
+                alt="User Avatar" 
+                className="header-user-avatar" 
+                onClick={handleAvatarClick}
+              />
+            ) : (
+              <div 
+                className="header-user-avatar header-avatar-letter" 
+                onClick={handleAvatarClick}
+              >
+                {user?.username?.charAt(0).toUpperCase() || '?'}
+              </div>
+            )}
             {showDropdown && (
               <div className="header-dropdown-menu">
                 <button className="header-dropdown-item" onClick={handleLogout}>
@@ -703,7 +965,13 @@ const ChatPage = () => {
       {/* Sidebar - как в MainPage */}
       <aside className="main-sidebar">
         <Link to="/profile" className="sidebar-profile">
-          <img src="/images/authimage.png" alt="Avatar" className="sidebar-avatar" />
+          {avatarUrl ? (
+            <img src={`http://localhost:5002${avatarUrl}`} alt="Avatar" className="sidebar-avatar" />
+          ) : (
+            <div className="sidebar-avatar sidebar-avatar-letter">
+              {user?.username?.charAt(0).toUpperCase() || '?'}
+            </div>
+          )}
           <div className="sidebar-profile-info">
             <div className="sidebar-profile-name">{user?.fullName || user?.username || 'Пользователь'}</div>
             <div className="sidebar-profile-role">{user?.username || ''}</div>
@@ -728,9 +996,23 @@ const ChatPage = () => {
                 value={chatSearchQuery}
                 onChange={(e) => setChatSearchQuery(e.target.value)}
               />
-              <button>+</button>
             </div>
             <div className="chat-items">
+              {/* Create Group Button - only show when not searching */}
+              {!chatSearchQuery.trim() && (
+                <div 
+                  className="chat-item create-group-item"
+                  onClick={() => setShowCreateGroupModal(true)}
+                >
+                  <div className="avatar create-group-avatar">
+                    <span>+</span>
+                  </div>
+                  <div className="chat-info">
+                    <div className="name">Создать беседу</div>
+                    <div className="message">Объедините друзей в группу</div>
+                  </div>
+                </div>
+              )}
               {chatSearchQuery.trim().length > 0 ? (
                 // Show search results (contacts)
                 loadingContacts ? (
@@ -765,28 +1047,58 @@ const ChatPage = () => {
                 filteredChats.length > 0 ? (
                   filteredChats.map(chat => {
                     const unreadCount = chat.unreadCount || chat.UnreadCount || 0;
+                    const isPinned = pinnedChats.includes(chat.id);
                     return (
                       <div
                         key={chat.id}
                         className={`chat-item ${activeChat?.id === chat.id ? 'active' : ''}`}
                         onClick={() => handleChatClick(chat)}
                       >
-                        <div 
-                          className="avatar"
-                          style={{
-                            backgroundImage: getChatAvatar(chat) ? `url(${getChatAvatar(chat)})` : 'none',
-                            backgroundColor: getChatAvatar(chat) ? 'transparent' : '#444',
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center'
-                          }}
-                        ></div>
+                        {getChatAvatar(chat) ? (
+                          <img 
+                            src={`http://localhost:5002${getChatAvatar(chat)}`}
+                            alt="Avatar"
+                            className="avatar"
+                          />
+                        ) : (
+                          <div className="avatar avatar-letter">
+                            {getOtherParticipant(chat)?.username?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )}
                         <div className="chat-info">
                           <div className="name">{getChatDisplayName(chat)}</div>
                           <div className="message">{getLastMessage(chat)}</div>
                         </div>
+                        {isPinned && (
+                          <img src="/pin.png" alt="Pinned" className="chat-pin-icon" />
+                        )}
                         {unreadCount > 0 && activeChat?.id !== chat.id && (
                           <div className="chat-unread-badge">{unreadCount}</div>
                         )}
+                        <div className="chat-item-menu-container" ref={chatMenuOpen === chat.id ? chatMenuRef : null}>
+                          <button 
+                            className="chat-item-menu-btn"
+                            onClick={(e) => handleChatMenuClick(e, chat.id)}
+                          >
+                            ⋯
+                          </button>
+                          {chatMenuOpen === chat.id && (
+                            <div className="chat-item-menu">
+                              <button onClick={(e) => handlePinChat(e, chat.id)}>
+                                <img src="/Pushpin.png" alt="" className="menu-icon" />
+                                {isPinned ? 'Открепить' : 'Закрепить'}
+                              </button>
+                              <button onClick={(e) => handleDeleteChatForMe(e, chat.id)} className="danger">
+                                <img src="/Wastebasket.png" alt="" className="menu-icon" />
+                                Удалить у себя
+                              </button>
+                              <button onClick={(e) => handleDeleteChatForEveryone(e, chat.id)} className="danger">
+                                <img src="/Wastebasket.png" alt="" className="menu-icon" />
+                                Удалить у всех
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })
@@ -801,9 +1113,26 @@ const ChatPage = () => {
         {activeChat ? (
           <section className="chat-area">
             <div className="chat-area-header">
-              <div className="chat-title">{getChatDisplayName(activeChat)}</div>
-              <div className="participants">{activeChat.participants?.length || 0} участников</div>
-              <div className="options">⋯</div>
+              <div className="chat-header-info">
+                {getChatAvatar(activeChat) ? (
+                  <img 
+                    src={`http://localhost:5002${getChatAvatar(activeChat)}`} 
+                    alt="Avatar" 
+                    className="chat-header-avatar"
+                  />
+                ) : (
+                  <div className="chat-header-avatar chat-header-avatar-letter">
+                    {getOtherParticipant(activeChat)?.username?.charAt(0).toUpperCase() || '?'}
+                  </div>
+                )}
+                <div className="chat-title">{getChatDisplayName(activeChat)}</div>
+              </div>
+              {!isDirectChat(activeChat) && (
+                <div className="chat-header-right">
+                  <div className="participants">{activeChat.participants?.length || 0} участников</div>
+                  <div className="options">⋯</div>
+                </div>
+              )}
             </div>
             <div className="messages" ref={messagesContainerRef}>
               {messagesLoading ? (
@@ -865,6 +1194,100 @@ const ChatPage = () => {
             </div>
           </section>
         )}
+
+      {/* Create Group Modal */}
+      {showCreateGroupModal && (
+        <div className="modal-overlay">
+          <div className="create-group-modal" ref={createGroupModalRef}>
+            <div className="modal-header">
+              <h2>Создать беседу</h2>
+              <button 
+                className="modal-close-btn"
+                onClick={() => {
+                  setShowCreateGroupModal(false);
+                  setGroupName('');
+                  setSelectedParticipants([]);
+                  setGroupSearchQuery('');
+                  setGroupSearchResults([]);
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <input
+                type="text"
+                className="group-name-input"
+                placeholder="Название беседы"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+              />
+              
+              {selectedParticipants.length > 0 && (
+                <div className="selected-participants">
+                  {selectedParticipants.map(participant => (
+                    <div key={participant.id} className="selected-participant-chip">
+                      <span>{participant.fullName || participant.username}</span>
+                      <button onClick={() => handleRemoveParticipant(participant.id)}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <input
+                type="text"
+                className="participant-search-input"
+                placeholder="Поиск участников..."
+                value={groupSearchQuery}
+                onChange={(e) => handleGroupSearch(e.target.value)}
+              />
+              
+              <div className="participant-search-results">
+                {groupSearchLoading ? (
+                  <div className="search-loading">Поиск...</div>
+                ) : groupSearchResults.length > 0 ? (
+                  groupSearchResults.map(result => (
+                    <div 
+                      key={result.id} 
+                      className="participant-search-item"
+                      onClick={() => handleAddParticipant(result)}
+                    >
+                      {result.avatarUrl ? (
+                        <img 
+                          src={`http://localhost:5002${result.avatarUrl}`}
+                          alt=""
+                          className="participant-avatar"
+                        />
+                      ) : (
+                        <div className="participant-avatar participant-avatar-letter">
+                          {(result.fullName || result.username || '?').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="participant-info">
+                        <div className="participant-name">{result.fullName || result.username}</div>
+                        <div className="participant-username">@{result.username}</div>
+                      </div>
+                    </div>
+                  ))
+                ) : groupSearchQuery.trim() ? (
+                  <div className="no-results">Пользователи не найдены</div>
+                ) : null}
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button 
+                className="create-group-btn"
+                onClick={handleCreateGroup}
+                disabled={selectedParticipants.length < 2 || !groupName.trim()}
+              >
+                Создать беседу ({selectedParticipants.length} участ.)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

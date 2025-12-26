@@ -65,17 +65,12 @@ public class PostService : IPostService
         var posts = await _postRepository.GetPublicPostsAsync(page, pageSize, searchQuery);
         var postIds = posts.Select(p => p.Id).ToList();
 
-        var reactionsCountsTask = _postRepository.GetReactionsCountsAsync(postIds);
-        var commentsCountsTask = _postRepository.GetCommentsCountsAsync(postIds);
-        var likedPostIdsTask = currentUserId.HasValue
-            ? _postRepository.GetLikedPostIdsAsync(postIds, currentUserId.Value)
-            : Task.FromResult<HashSet<Guid>>(new HashSet<Guid>());
-
-        await Task.WhenAll(reactionsCountsTask, commentsCountsTask, likedPostIdsTask);
-
-        var reactionsCounts = await reactionsCountsTask;
-        var commentsCounts = await commentsCountsTask;
-        var likedPostIds = await likedPostIdsTask;
+        // Run queries sequentially to avoid DbContext concurrency issues
+        var reactionsCounts = await _postRepository.GetReactionsCountsAsync(postIds);
+        var commentsCounts = await _postRepository.GetCommentsCountsAsync(postIds);
+        var likedPostIds = currentUserId.HasValue
+            ? await _postRepository.GetLikedPostIdsAsync(postIds, currentUserId.Value)
+            : new HashSet<Guid>();
 
         return posts.Select(post =>
         {
@@ -92,17 +87,12 @@ public class PostService : IPostService
         var posts = await _postRepository.GetUserPostsAsync(userId, currentUserId, page, pageSize);
         var postIds = posts.Select(p => p.Id).ToList();
 
-        var reactionsCountsTask = _postRepository.GetReactionsCountsAsync(postIds);
-        var commentsCountsTask = _postRepository.GetCommentsCountsAsync(postIds);
-        var likedPostIdsTask = currentUserId.HasValue
-            ? _postRepository.GetLikedPostIdsAsync(postIds, currentUserId.Value)
-            : Task.FromResult<HashSet<Guid>>(new HashSet<Guid>());
-
-        await Task.WhenAll(reactionsCountsTask, commentsCountsTask, likedPostIdsTask);
-
-        var reactionsCounts = await reactionsCountsTask;
-        var commentsCounts = await commentsCountsTask;
-        var likedPostIds = await likedPostIdsTask;
+        // Run queries sequentially to avoid DbContext concurrency issues
+        var reactionsCounts = await _postRepository.GetReactionsCountsAsync(postIds);
+        var commentsCounts = await _postRepository.GetCommentsCountsAsync(postIds);
+        var likedPostIds = currentUserId.HasValue
+            ? await _postRepository.GetLikedPostIdsAsync(postIds, currentUserId.Value)
+            : new HashSet<Guid>();
 
         return posts.Select(post =>
         {
@@ -126,15 +116,10 @@ public class PostService : IPostService
         var posts = await _postRepository.GetFeedPostsAsync(userId, followingIds, page, pageSize);
         var postIds = posts.Select(p => p.Id).ToList();
 
-        var reactionsCountsTask = _postRepository.GetReactionsCountsAsync(postIds);
-        var commentsCountsTask = _postRepository.GetCommentsCountsAsync(postIds);
-        var likedPostIdsTask = _postRepository.GetLikedPostIdsAsync(postIds, userId);
-
-        await Task.WhenAll(reactionsCountsTask, commentsCountsTask, likedPostIdsTask);
-
-        var reactionsCounts = await reactionsCountsTask;
-        var commentsCounts = await commentsCountsTask;
-        var likedPostIds = await likedPostIdsTask;
+        // Run queries sequentially to avoid DbContext concurrency issues
+        var reactionsCounts = await _postRepository.GetReactionsCountsAsync(postIds);
+        var commentsCounts = await _postRepository.GetCommentsCountsAsync(postIds);
+        var likedPostIds = await _postRepository.GetLikedPostIdsAsync(postIds, userId);
 
         return posts.Select(post =>
         {

@@ -46,6 +46,17 @@
   border-radius: 50%;
   object-fit: cover;
   background: #464646;
+  flex-shrink: 0;
+}
+
+.user-search-avatar-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #FFFFFF;
+  font-size: 20px;
+  font-weight: 600;
 }
 
 .user-search-result-info {

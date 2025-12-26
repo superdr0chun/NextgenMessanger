@@ -18,16 +18,16 @@ public class ReactionService : IReactionService
 
     public async Task<ReactionDto> AddReactionAsync(Guid postId, Guid userId, CreateReactionDto createDto)
     {
+        // Check for any existing reaction (including deleted ones) due to unique constraint
         var existingReaction = await _context.Reactions
             .Include(r => r.User)
                 .ThenInclude(u => u.Profile)
-            .FirstOrDefaultAsync(r => r.PostId == postId 
-                && r.UserId == userId 
-                && !r.Deleted);
+            .FirstOrDefaultAsync(r => r.PostId == postId && r.UserId == userId);
 
         if (existingReaction != null)
         {
-            if (existingReaction.Type == createDto.Type)
+            // If already active with same type, just return it
+            if (!existingReaction.Deleted && existingReaction.Type == createDto.Type)
             {
                 return new ReactionDto
                 {
@@ -41,13 +41,17 @@ public class ReactionService : IReactionService
                 };
             }
 
+            // Reactivate or update existing reaction
             existingReaction.Type = createDto.Type;
             existingReaction.UpdatedAt = DateTime.UtcNow;
             existingReaction.Deleted = false;
             existingReaction.DeletedAt = null;
+            
+            await _context.SaveChangesAsync();
         }
         else
         {
+            // Create new reaction
             var reaction = new Core.Entities.Reaction
             {
                 Id = Guid.NewGuid(),
@@ -79,8 +83,6 @@ public class ReactionService : IReactionService
                     new { post_id = postId.ToString(), user_id = userId.ToString() });
             }
         }
-
-        await _context.SaveChangesAsync();
 
         return new ReactionDto
         {

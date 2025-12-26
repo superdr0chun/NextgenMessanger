@@ -408,5 +408,56 @@ public class ChatService : IChatService
 
         await _context.SaveChangesAsync();
     }
+
+    public async Task DeleteChatAsync(Guid chatId, Guid userId, bool forEveryone = false)
+    {
+        var chat = await _context.Chats
+            .Include(c => c.Participants)
+            .FirstOrDefaultAsync(c => c.Id == chatId && !c.Deleted);
+
+        if (chat == null)
+        {
+            throw new KeyNotFoundException("Chat not found");
+        }
+
+        // Check if user is a participant
+        var participant = chat.Participants
+            .FirstOrDefault(p => p.UserId == userId && !p.Deleted && p.LeftAt == null);
+
+        if (participant == null)
+        {
+            throw new UnauthorizedAccessException("You are not a participant of this chat");
+        }
+
+        if (forEveryone)
+        {
+            // Delete for everyone
+            // For group chats, only owner can delete for everyone
+            if (chat.Type == ChatType.Group && participant.Role != ChatParticipantRole.Owner)
+            {
+                throw new UnauthorizedAccessException("Only owners can delete group chats for everyone");
+            }
+
+            // Soft delete the chat
+            chat.Deleted = true;
+            chat.DeletedAt = DateTime.UtcNow;
+            chat.UpdatedAt = DateTime.UtcNow;
+
+            // Mark all participants as left
+            foreach (var p in chat.Participants.Where(p => !p.Deleted && p.LeftAt == null))
+            {
+                p.LeftAt = DateTime.UtcNow;
+                p.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+        else
+        {
+            // Delete only for this user (leave chat)
+            participant.LeftAt = DateTime.UtcNow;
+            participant.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await _context.SaveChangesAsync();
+    }
 }
 

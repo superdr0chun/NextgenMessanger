@@ -18,8 +18,7 @@ public class ChatParticipantConfiguration : IEntityTypeConfiguration<ChatPartici
 
         builder.Property(cp => cp.Role)
             .HasConversion(converter)
-            .HasMaxLength(20)
-            .HasDefaultValue(ChatParticipantRole.Member);
+            .HasMaxLength(20);
 
         builder.Property(cp => cp.JoinedAt)
             .HasDefaultValueSql("NOW()");

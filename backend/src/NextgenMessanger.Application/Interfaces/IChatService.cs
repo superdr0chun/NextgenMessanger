@@ -11,5 +11,6 @@ public interface IChatService
     Task AddParticipantAsync(Guid chatId, Guid userId, Guid participantId);
     Task RemoveParticipantAsync(Guid chatId, Guid userId, Guid participantId);
     Task MarkChatAsReadAsync(Guid chatId, Guid userId);
+    Task DeleteChatAsync(Guid chatId, Guid userId, bool forEveryone = false);
 }
 
