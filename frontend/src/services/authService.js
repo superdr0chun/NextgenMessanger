@@ -17,13 +17,11 @@ export const authService = {
       password,
     });
     
-    // Save tokens to localStorage
     if (response.data.accessToken && response.data.refreshToken) {
       localStorage.setItem('accessToken', response.data.accessToken);
       localStorage.setItem('refreshToken', response.data.refreshToken);
     }
     
-    // Load and save user data immediately
     try {
       const userData = await this.getCurrentUser();
       localStorage.setItem('userData', JSON.stringify(userData));

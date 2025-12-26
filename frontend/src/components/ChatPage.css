@@ -782,6 +782,12 @@
 .participant-search-results {
   max-height: 200px;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.participant-search-results::-webkit-scrollbar {
+  display: none;
 }
 
 .participant-search-item {

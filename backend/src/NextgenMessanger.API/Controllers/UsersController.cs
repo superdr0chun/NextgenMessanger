@@ -27,10 +27,20 @@ public class UsersController : ControllerBase
         return Ok(users);
     }
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetUser(Guid id)
+    [HttpGet("{idOrUsername}")]
+    public async Task<IActionResult> GetUser(string idOrUsername)
     {
-        var user = await _userService.GetByIdAsync(id);
+        UserDto? user = null;
+        
+        if (Guid.TryParse(idOrUsername, out var userId))
+        {
+            user = await _userService.GetByIdAsync(userId);
+        }
+        else
+        {
+            user = await _userService.GetByUsernameAsync(idOrUsername);
+        }
+
         if (user == null)
         {
             return NotFound();

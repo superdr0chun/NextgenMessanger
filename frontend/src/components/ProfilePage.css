@@ -202,6 +202,109 @@
   color: #FFFFFF;
   line-height: 1.5;
   margin-top: 8px;
+  min-height: 24px;
+  transition: all 0.2s ease;
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: default;
+}
+
+.profile-main-bio:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.profile-bio-edit {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fadeInScale 0.2s ease-out;
+}
+
+.profile-bio-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  color: #FFFFFF;
+  font-size: 16px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.profile-bio-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.profile-bio-textarea:focus {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.profile-bio-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.profile-bio-save,
+.profile-bio-cancel {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.profile-bio-save {
+  background: #FFFFFF;
+  color: #282728;
+}
+
+.profile-bio-save:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.profile-bio-save:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.profile-bio-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.profile-bio-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.profile-bio-cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.profile-bio-cancel:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.profile-bio-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 

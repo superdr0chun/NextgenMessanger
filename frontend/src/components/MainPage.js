@@ -11,6 +11,7 @@ import { reactionService } from '../services/reactionService';
 import { commentService } from '../services/commentService';
 import { userService } from '../services/userService';
 import api from '../services/api';
+import { STATIC_BASE_URL, POLLING_INTERVALS } from '../config/constants';
 
 function MainPage() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ function MainPage() {
   const [posts, setPosts] = useState([]);
   const [newPostContent, setNewPostContent] = useState('');
   const [isCreatingPost, setIsCreatingPost] = useState(false);
-  const [expandedComments, setExpandedComments] = useState(null); // postId of expanded comments
+  const [expandedComments, setExpandedComments] = useState(null); 
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -53,7 +54,6 @@ function MainPage() {
     };
   }, []);
 
-  // Load unread messages count
   useEffect(() => {
     if (!authService.isAuthenticated()) return;
     
@@ -67,18 +67,18 @@ function MainPage() {
     };
 
     loadUnreadCount();
-    // Refresh every 5 seconds
-    const interval = setInterval(loadUnreadCount, 5000);
+    const interval = setInterval(loadUnreadCount, POLLING_INTERVALS.UNREAD_MESSAGES);
     return () => clearInterval(interval);
   }, []);
 
-  // Load user avatar
   useEffect(() => {
     if (!user?.id) return;
 
     const loadUserAvatar = async () => {
+      if (!user?.username) return;
+      
       try {
-        const response = await api.get(`/users/${user.id}/profile`);
+        const response = await api.get(`/users/${user.username}/profile`);
         if (response.data?.avatarUrl) {
           setAvatarUrl(response.data.avatarUrl);
         }
@@ -88,9 +88,8 @@ function MainPage() {
     };
 
     loadUserAvatar();
-  }, [user?.id]);
+  }, [user?.id, user?.username]);
 
-  // Helper function to extract user ID from notification
   const getNotificationUserId = useCallback((notification) => {
     if (notification.data) {
       try {
@@ -105,7 +104,6 @@ function MainPage() {
     return null;
   }, []);
 
-  // Load notifications
   useEffect(() => {
     if (!authService.isAuthenticated()) return;
     
@@ -150,13 +148,15 @@ function MainPage() {
               }
               
               // Always try to load avatar from profile
-              try {
-                const profileResponse = await api.get(`/users/${userId}/profile`);
-                if (profileResponse.data?.avatarUrl) {
-                  userInfo.avatarUrl = profileResponse.data.avatarUrl;
+              if (userInfo.username) {
+                try {
+                  const profileResponse = await api.get(`/users/${userInfo.username}/profile`);
+                  if (profileResponse.data?.avatarUrl) {
+                    userInfo.avatarUrl = profileResponse.data.avatarUrl;
+                  }
+                } catch (profileError) {
+                  // Profile might not exist, that's ok
                 }
-              } catch (profileError) {
-                // Profile might not exist, that's ok
               }
               
               usersInfo[userId] = userInfo;
@@ -355,9 +355,10 @@ function MainPage() {
           ? JSON.parse(notification.data) 
           : notification.data;
         const followerId = data.follower_id || data.followerId;
+        const followerUsername = data.follower_username || data.followerUsername;
         if (followerId) {
           setShowNotifications(false);
-          navigate(`/profile/${followerId}`);
+          navigate(`/profile/${followerUsername || followerId}`);
         }
       } catch (e) {
         console.error('Error parsing notification data:', e);
@@ -504,7 +505,7 @@ function MainPage() {
                     >
                       {getNotificationAvatarUrl(notification) ? (
                         <img 
-                          src={`http://localhost:5002${getNotificationAvatarUrl(notification)}`}
+                          src={`${STATIC_BASE_URL}${getNotificationAvatarUrl(notification)}`}
                           alt=""
                           className="notification-avatar"
                         />
@@ -540,7 +541,7 @@ function MainPage() {
           <div className="header-user-profile" ref={dropdownRef}>
             {avatarUrl ? (
               <img 
-                src={`http://localhost:5002${avatarUrl}`} 
+                src={`${STATIC_BASE_URL}${avatarUrl}`} 
                 alt="User Avatar" 
                 className="header-user-avatar" 
                 onClick={handleAvatarClick}
@@ -576,7 +577,7 @@ function MainPage() {
       <aside className="main-sidebar">
         <Link to="/profile" className="sidebar-profile">
           {avatarUrl ? (
-            <img src={`http://localhost:5002${avatarUrl}`} alt="Avatar" className="sidebar-avatar" />
+            <img src={`${STATIC_BASE_URL}${avatarUrl}`} alt="Avatar" className="sidebar-avatar" />
           ) : (
             <div className="sidebar-avatar sidebar-avatar-letter">
               {user?.username?.charAt(0).toUpperCase() || '?'}
@@ -648,7 +649,7 @@ function MainPage() {
           {posts.length > 0 ? (
             posts.map(post => (
               <div key={post.id} className="post-card">
-                <div className="post-header" onClick={() => navigate(`/profile/${post.authorId}`)} style={{ cursor: 'pointer' }}>
+                <div className="post-header" onClick={() => navigate(`/profile/${post.authorUsername || post.authorId}`)} style={{ cursor: 'pointer' }}>
                   <div className="post-avatar-letter">
                     {getAuthorLetter(post.authorUsername)}
                   </div>
@@ -709,14 +710,14 @@ function MainPage() {
                           <div key={comment.id} className="comment-item">
                             <div 
                               className="comment-avatar"
-                              onClick={() => navigate(`/profile/${comment.authorId}`)}
+                              onClick={() => navigate(`/profile/${comment.authorUsername || comment.authorId}`)}
                             >
                               {comment.authorUsername?.charAt(0).toUpperCase() || '?'}
                             </div>
                             <div className="comment-body">
                               <span 
                                 className="comment-author"
-                                onClick={() => navigate(`/profile/${comment.authorId}`)}
+                                onClick={() => navigate(`/profile/${comment.authorUsername || comment.authorId}`)}
                               >
                                 {comment.authorUsername}
                               </span>

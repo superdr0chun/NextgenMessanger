@@ -65,7 +65,6 @@ public class PostService : IPostService
         var posts = await _postRepository.GetPublicPostsAsync(page, pageSize, searchQuery);
         var postIds = posts.Select(p => p.Id).ToList();
 
-        // Run queries sequentially to avoid DbContext concurrency issues
         var reactionsCounts = await _postRepository.GetReactionsCountsAsync(postIds);
         var commentsCounts = await _postRepository.GetCommentsCountsAsync(postIds);
         var likedPostIds = currentUserId.HasValue
@@ -87,7 +86,6 @@ public class PostService : IPostService
         var posts = await _postRepository.GetUserPostsAsync(userId, currentUserId, page, pageSize);
         var postIds = posts.Select(p => p.Id).ToList();
 
-        // Run queries sequentially to avoid DbContext concurrency issues
         var reactionsCounts = await _postRepository.GetReactionsCountsAsync(postIds);
         var commentsCounts = await _postRepository.GetCommentsCountsAsync(postIds);
         var likedPostIds = currentUserId.HasValue
@@ -116,7 +114,6 @@ public class PostService : IPostService
         var posts = await _postRepository.GetFeedPostsAsync(userId, followingIds, page, pageSize);
         var postIds = posts.Select(p => p.Id).ToList();
 
-        // Run queries sequentially to avoid DbContext concurrency issues
         var reactionsCounts = await _postRepository.GetReactionsCountsAsync(postIds);
         var commentsCounts = await _postRepository.GetCommentsCountsAsync(postIds);
         var likedPostIds = await _postRepository.GetLikedPostIdsAsync(postIds, userId);

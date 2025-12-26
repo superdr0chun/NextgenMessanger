@@ -1,4 +1,3 @@
-// src/Login.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './Login.css';
@@ -24,21 +23,14 @@ function Login() {
 
     try {
       if (isRegister) {
-        // Registration
         await authService.register(email, username, password, fullName || null);
-        // After successful registration, login automatically
         await authService.login(email, password);
       } else {
-        // Login
         await authService.login(email, password);
       }
       
-      // User data is already loaded and saved in authService.login
-      // Get it from the response or reload from API
       const userData = await authService.getCurrentUser();
       updateUser(userData);
-      
-      // Redirect to main page on success
       navigate('/');
     } catch (err) {
       setError(
@@ -51,7 +43,6 @@ function Login() {
   };
 
   useEffect(() => {
-    // Update mode when URL parameter changes
     setIsRegister(searchParams.get('mode') === 'register');
   }, [searchParams]);
 
@@ -62,7 +53,6 @@ function Login() {
     setPassword('');
     setUsername('');
     setFullName('');
-    // Update URL without reload
     navigate(isRegister ? '/auth' : '/auth?mode=register', { replace: true });
   };
 

@@ -1,4 +1,3 @@
-// src/components/ChatPage.js
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './ChatPage.css';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -11,6 +10,7 @@ import { followService } from '../services/followService';
 import { notificationService } from '../services/notificationService';
 import { userService } from '../services/userService';
 import api from '../services/api';
+import { STATIC_BASE_URL, POLLING_INTERVALS } from '../config/constants';
 
 const ChatPage = () => {
   const navigate = useNavigate();
@@ -77,13 +77,11 @@ const ChatPage = () => {
     };
   }, []);
 
-  // Load pinned chats from localStorage
   useEffect(() => {
     const pinned = chatService.getPinnedChats();
     setPinnedChats(pinned);
   }, []);
 
-  // Helper function to extract user ID from notification
   const getNotificationUserId = useCallback((notification) => {
     if (notification.data) {
       try {
@@ -98,7 +96,6 @@ const ChatPage = () => {
     return null;
   }, []);
 
-  // Load notifications
   useEffect(() => {
     if (!authService.isAuthenticated()) return;
     
@@ -106,33 +103,26 @@ const ChatPage = () => {
       try {
         const data = await notificationService.getNotifications(1, 20);
         const allNotifs = data.notifications || [];
-        // Filter out message notifications - they are shown in navigation
         const notifs = allNotifs.filter(n => n.type !== 'new_message');
         setNotifications(notifs);
-        // Count unread non-message notifications
         const unreadNonMessage = notifs.filter(n => !n.isRead).length;
         setUnreadNotificationsCount(unreadNonMessage);
         
-        // Load user info and avatars for notifications
         const userIdsToLoad = [];
         notifs.forEach(notification => {
           const notifUserId = getNotificationUserId(notification);
-          // Load if we don't have this user OR if we have user but no avatar
           if (notifUserId && (!notificationUsers[notifUserId] || !notificationUsers[notifUserId].avatarUrl)) {
             userIdsToLoad.push(notifUserId);
           }
         });
         
-        // Load unique user IDs
         const uniqueUserIds = [...new Set(userIdsToLoad)];
         if (uniqueUserIds.length > 0) {
           const usersInfo = {};
           await Promise.all(uniqueUserIds.map(async (id) => {
             try {
-              // Start with existing user info if we have it
               let userInfo = notificationUsers[id] ? { ...notificationUsers[id] } : {};
               
-              // Try to load user info if we don't have it
               if (!userInfo.username) {
                 try {
                   const fetchedUser = await userService.getUserById(id);
@@ -142,14 +132,14 @@ const ChatPage = () => {
                 }
               }
               
-              // Always try to load avatar from profile
-              try {
-                const profileResponse = await api.get(`/users/${id}/profile`);
-                if (profileResponse.data?.avatarUrl) {
-                  userInfo.avatarUrl = profileResponse.data.avatarUrl;
+              if (userInfo.username) {
+                try {
+                  const profileResponse = await api.get(`/users/${userInfo.username}/profile`);
+                  if (profileResponse.data?.avatarUrl) {
+                    userInfo.avatarUrl = profileResponse.data.avatarUrl;
+                  }
+                } catch (e) {
                 }
-              } catch (e) {
-                // Profile might not exist, that's ok
               }
               
               usersInfo[id] = userInfo;
@@ -165,7 +155,6 @@ const ChatPage = () => {
     };
 
     loadNotifications();
-    // Refresh every 10 seconds
     const interval = setInterval(loadNotifications, 10000);
     return () => clearInterval(interval);
   }, [getNotificationUserId, notificationUsers]);
@@ -181,12 +170,10 @@ const ChatPage = () => {
         }
         setChats(chatsData);
         
-        // If we have an initial chat ID from URL, select that chat
         if (initialChatId && chatsData.length > 0) {
           const targetChat = chatsData.find(chat => chat.id === initialChatId);
           if (targetChat) {
             setActiveChat(targetChat);
-            // Mark as read
             try {
               await chatService.markAsRead(targetChat.id);
             } catch (error) {
@@ -204,44 +191,39 @@ const ChatPage = () => {
     loadChats();
   }, [initialChatId]);
 
-  // Load followers and following for search
   useEffect(() => {
     const loadContacts = async () => {
       if (!user?.id) return;
       
       setLoadingContacts(true);
       try {
-        // Load both followers and following
         const [followers, following] = await Promise.all([
           followService.getFollowers(user.id, 1, 1000),
           followService.getFollowing(user.id, 1, 1000),
         ]);
 
-        // Combine and deduplicate by userId
         const allContacts = new Map();
         
-        // Add followers (users who follow us)
         if (Array.isArray(followers)) {
           followers.forEach(f => {
             if (f.followerId && f.followerId !== user.id) {
               allContacts.set(f.followerId, {
                 id: f.followerId,
                 username: f.followerUsername || '',
-                fullName: f.followerUsername || '', // FollowDto doesn't have fullName, using username
+                fullName: f.followerUsername || '',
                 avatarUrl: f.followerAvatarUrl || null,
               });
             }
           });
         }
 
-        // Add following (users we follow)
         if (Array.isArray(following)) {
           following.forEach(f => {
             if (f.followeeId && f.followeeId !== user.id) {
               allContacts.set(f.followeeId, {
                 id: f.followeeId,
                 username: f.followeeUsername || '',
-                fullName: f.followeeUsername || '', // FollowDto doesn't have fullName, using username
+                fullName: f.followeeUsername || '',
                 avatarUrl: f.followeeAvatarUrl || null,
               });
             }
@@ -259,7 +241,6 @@ const ChatPage = () => {
     loadContacts();
   }, [user?.id]);
 
-  // Load unread messages count
   useEffect(() => {
     const loadUnreadCount = async () => {
       if (!user?.id) return;
@@ -272,18 +253,18 @@ const ChatPage = () => {
     };
 
     loadUnreadCount();
-    // Refresh every 5 seconds
-    const interval = setInterval(loadUnreadCount, 5000);
+    const interval = setInterval(loadUnreadCount, POLLING_INTERVALS.UNREAD_MESSAGES);
     return () => clearInterval(interval);
   }, [user?.id]);
 
-  // Load user avatar
   useEffect(() => {
     if (!user?.id) return;
 
     const loadUserAvatar = async () => {
+      if (!user?.username) return;
+      
       try {
-        const response = await api.get(`/users/${user.id}/profile`);
+        const response = await api.get(`/users/${user.username}/profile`);
         if (response.data?.avatarUrl) {
           setAvatarUrl(response.data.avatarUrl);
         }
@@ -293,7 +274,7 @@ const ChatPage = () => {
     };
 
     loadUserAvatar();
-  }, [user?.id]);
+  }, [user?.id, user?.username]);
 
   useEffect(() => {
     if (activeChat?.id) {
@@ -301,17 +282,14 @@ const ChatPage = () => {
         setMessagesLoading(true);
         try {
           const messagesData = await chatService.getMessages(activeChat.id);
-          // Sort messages by time ascending (oldest first, newest last at bottom)
           const sortedMessages = Array.isArray(messagesData) 
             ? [...messagesData].sort((a, b) => new Date(a.sentAt || a.createdAt) - new Date(b.sentAt || b.createdAt))
             : [];
           setMessages(sortedMessages);
           
-          // Mark message notifications as read when opening chat
           try {
             await notificationService.markAllAsRead();
             setUnreadMessagesCount(0);
-            // Reload unread count to get updated value
             const count = await notificationService.getUnreadCount();
             setUnreadMessagesCount(count);
           } catch (error) {
@@ -327,7 +305,6 @@ const ChatPage = () => {
 
       loadMessages();
       
-      // Poll for new messages every 3 seconds
       const pollMessages = setInterval(async () => {
         try {
           const messagesData = await chatService.getMessages(activeChat.id);
@@ -338,15 +315,14 @@ const ChatPage = () => {
         } catch (error) {
           console.error('Error polling messages:', error);
         }
-      }, 3000);
+      }, POLLING_INTERVALS.MESSAGES);
       
       return () => clearInterval(pollMessages);
     } else {
       setMessages([]);
     }
-  }, [activeChat?.id]); // Only reload when chat ID changes
+  }, [activeChat?.id]);
 
-  // Scroll to bottom only on initial load or when user sends a message
   useEffect(() => {
     if (shouldScrollToBottom.current && messages.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -354,12 +330,10 @@ const ChatPage = () => {
     prevMessagesLength.current = messages.length;
   }, [messages]);
 
-  // Reset scroll flag when chat changes
   useEffect(() => {
     shouldScrollToBottom.current = true;
   }, [activeChat?.id]);
 
-  // Forward wheel events from anywhere on page to messages container
   useEffect(() => {
     const handleWheel = (e) => {
       if (messagesContainerRef.current && activeChat) {
@@ -367,12 +341,10 @@ const ChatPage = () => {
         const isAtTop = messagesEl.scrollTop === 0;
         const isAtBottom = messagesEl.scrollTop + messagesEl.clientHeight >= messagesEl.scrollHeight - 10;
         
-        // If user scrolls up, disable auto-scroll
         if (e.deltaY < 0) {
           shouldScrollToBottom.current = false;
         }
         
-        // If user scrolls to bottom, enable auto-scroll again
         if (isAtBottom && e.deltaY > 0) {
           shouldScrollToBottom.current = true;
         }
@@ -397,7 +369,6 @@ const ChatPage = () => {
   };
 
   const handleNotificationClick = async (notification) => {
-    // Mark as read
     if (!notification.isRead) {
       try {
         await notificationService.markAsRead(notification.id);
@@ -410,16 +381,16 @@ const ChatPage = () => {
       }
     }
 
-    // Navigate based on notification type
     if (notification.type === 'new_follower' && notification.data) {
       try {
         const data = typeof notification.data === 'string' 
           ? JSON.parse(notification.data) 
           : notification.data;
         const followerId = data.follower_id || data.followerId;
+        const followerUsername = data.follower_username || data.followerUsername;
         if (followerId) {
           setShowNotifications(false);
-          navigate(`/profile/${followerId}`);
+          navigate(`/profile/${followerUsername || followerId}`);
         }
       } catch (e) {
         console.error('Error parsing notification data:', e);
@@ -460,13 +431,11 @@ const ChatPage = () => {
           ? JSON.parse(notification.data) 
           : notification.data;
         
-        // Try multiple property name variations
         const username = data.follower_username || data.followerUsername || 
                         data.username || data.user_name || data.userName;
         
         if (username) return username;
         
-        // Try to get from cached users
         const notifUserId = data.follower_id || data.followerId || data.user_id || data.userId;
         if (notifUserId && notificationUsers[notifUserId]) {
           return notificationUsers[notifUserId].username || notificationUsers[notifUserId].userName || 'Пользователь';
@@ -487,18 +456,15 @@ const ChatPage = () => {
           ? JSON.parse(notification.data) 
           : notification.data;
         
-        // Try to get avatar from notification data
         if (data.avatarUrl || data.avatar_url) {
           return data.avatarUrl || data.avatar_url;
         }
         
-        // Try to get from cached users
         const notifUserId = data.follower_id || data.followerId || data.user_id || data.userId;
         if (notifUserId && notificationUsers[notifUserId]?.avatarUrl) {
           return notificationUsers[notifUserId].avatarUrl;
         }
       } catch (e) {
-        // ignore
       }
     }
     return null;
@@ -515,7 +481,6 @@ const ChatPage = () => {
     if (chat.title) {
       return chat.title;
     }
-    // For direct chats, show the other participant's name
     if ((chat.type === 'Direct' || chat.type === 'direct') && chat.participants) {
       const otherParticipant = chat.participants.find(p => p.userId !== user?.id);
       if (otherParticipant) {
@@ -525,7 +490,6 @@ const ChatPage = () => {
     return 'Chat';
   };
 
-  // Helper function to get other participant
   const getOtherParticipant = (chat) => {
     if ((chat.type === 'Direct' || chat.type === 'direct') && chat.participants) {
       return chat.participants.find(p => p.userId !== user?.id);
@@ -533,7 +497,6 @@ const ChatPage = () => {
     return null;
   };
 
-  // Helper function to get chat avatar
   const getChatAvatar = (chat) => {
     const otherParticipant = getOtherParticipant(chat);
     if (otherParticipant?.avatarUrl) {
@@ -542,14 +505,11 @@ const ChatPage = () => {
     return null;
   };
 
-  // Helper function to get last message with truncation
   const getLastMessage = (chat, maxLength = 50) => {
-    // Try both camelCase and PascalCase property names (API might return either)
     const lastMessageContent = chat.lastMessageContent || chat.LastMessageContent;
     const lastMessageSenderId = chat.lastMessageSenderId || chat.LastMessageSenderId;
     
     if (lastMessageContent) {
-      // Check if the last message is from current user
       const isFromCurrentUser = lastMessageSenderId && user?.id && 
         (lastMessageSenderId === user.id || 
          lastMessageSenderId.toString() === user.id.toString() ||
@@ -560,7 +520,6 @@ const ChatPage = () => {
         messageText = messageText.substring(0, maxLength) + '...';
       }
       
-      // Add "Вы: " prefix if message is from current user
       if (isFromCurrentUser) {
         return `Вы: ${messageText}`;
       }
@@ -576,7 +535,6 @@ const ChatPage = () => {
       return name.includes(chatSearchQuery.toLowerCase());
     })
     .sort((a, b) => {
-      // Pinned chats first
       const aPinned = pinnedChats.includes(a.id);
       const bPinned = pinnedChats.includes(b.id);
       if (aPinned && !bPinned) return -1;
@@ -584,7 +542,6 @@ const ChatPage = () => {
       return 0;
     });
 
-  // Filter contacts (followers/following) by search query
   const filteredContacts = chatSearchQuery.trim().length > 0
     ? followersAndFollowing.filter(contact => {
         const searchLower = chatSearchQuery.toLowerCase();
@@ -596,10 +553,8 @@ const ChatPage = () => {
 
   const handleChatClick = async (chat) => {
     setActiveChat(chat);
-    // Mark chat as read
     try {
       await chatService.markAsRead(chat.id);
-      // Update chat in list to reset unread count
       setChats(prevChats => prevChats.map(c => 
         c.id === chat.id ? { ...c, unreadCount: 0, UnreadCount: 0 } : c
       ));
@@ -633,7 +588,6 @@ const ChatPage = () => {
       if (activeChat?.id === chatId) {
         setActiveChat(null);
       }
-      // Also remove from pinned if it was pinned
       if (pinnedChats.includes(chatId)) {
         chatService.unpinChat(chatId);
         setPinnedChats(pinnedChats.filter(id => id !== chatId));
@@ -652,7 +606,6 @@ const ChatPage = () => {
       if (activeChat?.id === chatId) {
         setActiveChat(null);
       }
-      // Also remove from pinned if it was pinned
       if (pinnedChats.includes(chatId)) {
         chatService.unpinChat(chatId);
         setPinnedChats(pinnedChats.filter(id => id !== chatId));
@@ -663,14 +616,12 @@ const ChatPage = () => {
     setChatMenuOpen(null);
   };
 
-  // Helper to check if chat is direct (1-on-1)
   const isDirectChat = (chat) => {
     return chat?.type === 'Direct' || chat?.type === 'direct';
   };
 
   const handleContactClick = async (contact) => {
     try {
-      // Check if chat already exists with this user
       const existingChat = chats.find(chat => {
         if (chat.type === 'Direct' || chat.type === 'direct') {
           return chat.participants?.some(p => p.userId === contact.id);
@@ -679,18 +630,15 @@ const ChatPage = () => {
       });
 
       if (existingChat) {
-        // Open existing chat
         setActiveChat(existingChat);
-        setChatSearchQuery(''); // Clear search
+        setChatSearchQuery('');
       } else {
-        // Create new direct chat
         console.log('Creating chat with contact:', contact);
         console.log('Contact ID type:', typeof contact.id, 'value:', contact.id);
         try {
           const newChat = await chatService.createChat([contact.id], 'Direct');
           console.log('Created new chat:', newChat);
         
-        // Reload chats to include the new one
         const chatsData = await chatService.getChats();
         setChats(chatsData);
         
@@ -893,7 +841,7 @@ const ChatPage = () => {
                     >
                       {getNotificationAvatarUrl(notification) ? (
                         <img 
-                          src={`http://localhost:5002${getNotificationAvatarUrl(notification)}`}
+                          src={`${STATIC_BASE_URL}${getNotificationAvatarUrl(notification)}`}
                           alt=""
                           className="notification-avatar"
                         />
@@ -929,7 +877,7 @@ const ChatPage = () => {
           <div className="header-user-profile" ref={dropdownRef}>
             {avatarUrl ? (
               <img 
-                src={`http://localhost:5002${avatarUrl}`} 
+                src={`${STATIC_BASE_URL}${avatarUrl}`} 
                 alt="User Avatar" 
                 className="header-user-avatar" 
                 onClick={handleAvatarClick}
@@ -966,7 +914,7 @@ const ChatPage = () => {
       <aside className="main-sidebar">
         <Link to="/profile" className="sidebar-profile">
           {avatarUrl ? (
-            <img src={`http://localhost:5002${avatarUrl}`} alt="Avatar" className="sidebar-avatar" />
+            <img src={`${STATIC_BASE_URL}${avatarUrl}`} alt="Avatar" className="sidebar-avatar" />
           ) : (
             <div className="sidebar-avatar sidebar-avatar-letter">
               {user?.username?.charAt(0).toUpperCase() || '?'}
@@ -1056,7 +1004,7 @@ const ChatPage = () => {
                       >
                         {getChatAvatar(chat) ? (
                           <img 
-                            src={`http://localhost:5002${getChatAvatar(chat)}`}
+                            src={`${STATIC_BASE_URL}${getChatAvatar(chat)}`}
                             alt="Avatar"
                             className="avatar"
                           />
@@ -1116,7 +1064,7 @@ const ChatPage = () => {
               <div className="chat-header-info">
                 {getChatAvatar(activeChat) ? (
                   <img 
-                    src={`http://localhost:5002${getChatAvatar(activeChat)}`} 
+                    src={`${STATIC_BASE_URL}${getChatAvatar(activeChat)}`} 
                     alt="Avatar" 
                     className="chat-header-avatar"
                   />
@@ -1255,7 +1203,7 @@ const ChatPage = () => {
                     >
                       {result.avatarUrl ? (
                         <img 
-                          src={`http://localhost:5002${result.avatarUrl}`}
+                          src={`${STATIC_BASE_URL}${result.avatarUrl}`}
                           alt=""
                           className="participant-avatar"
                         />

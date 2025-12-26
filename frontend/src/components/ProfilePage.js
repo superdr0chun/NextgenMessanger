@@ -11,10 +11,11 @@ import api from '../services/api';
 import { notificationService } from '../services/notificationService';
 import { reactionService } from '../services/reactionService';
 import { commentService } from '../services/commentService';
+import { STATIC_BASE_URL, POLLING_INTERVALS, CACHE_TIMEOUTS } from '../config/constants';
 
 function ProfilePage() {
   const navigate = useNavigate();
-  const { userId } = useParams();
+  const { username } = useParams();
   const { user: currentUser, clearUser } = useUser();
   const [profileUser, setProfileUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -43,15 +44,17 @@ function ProfilePage() {
   const [myAvatarUrl, setMyAvatarUrl] = useState(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [bioText, setBioText] = useState('');
+  const [bioSaving, setBioSaving] = useState(false);
   const dropdownRef = useRef(null);
   const notificationsRef = useRef(null);
   const searchInputRef = useRef(null);
   const searchContainerRef = useRef(null);
   const avatarInputRef = useRef(null);
 
-  // Determine which user to display
-  const displayUser = userId ? profileUser : currentUser;
-  const isOwnProfile = !userId || userId === currentUser?.id;
+  const displayUser = username ? profileUser : currentUser;
+  const isOwnProfile = !username || username === currentUser?.username;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -128,14 +131,14 @@ function ProfilePage() {
                 }
               }
               
-              // Always try to load avatar from profile
-              try {
-                const profileResponse = await api.get(`/users/${id}/profile`);
-                if (profileResponse.data?.avatarUrl) {
-                  userInfo.avatarUrl = profileResponse.data.avatarUrl;
+              if (userInfo.username) {
+                try {
+                  const profileResponse = await api.get(`/users/${userInfo.username}/profile`);
+                  if (profileResponse.data?.avatarUrl) {
+                    userInfo.avatarUrl = profileResponse.data.avatarUrl;
+                  }
+                } catch (e) {
                 }
-              } catch (e) {
-                // Profile might not exist, that's ok
               }
               
               usersInfo[id] = userInfo;
@@ -166,8 +169,7 @@ function ProfilePage() {
           const parsedStats = JSON.parse(cachedStats);
           const cacheTime = parsedStats.cachedAt || 0;
           const now = Date.now();
-          // Use cached data if it's less than 30 seconds old
-          if (now - cacheTime < 30000) {
+          if (now - cacheTime < CACHE_TIMEOUTS.USER_PROFILE) {
             setStats({
               postsCount: parsedStats.postsCount || 0,
               followersCount: parsedStats.followersCount || 0,
@@ -262,38 +264,48 @@ function ProfilePage() {
 
   useEffect(() => {
     const loadUserProfile = async () => {
-      if (userId) {
+      if (username) {
         setLoading(true);
         try {
-          const userData = await userService.getUserById(userId);
+          const userData = await userService.getUserByUsername(username);
           setProfileUser(userData);
           
-          // Check if current user is following this user
           if (currentUser?.id && userData?.id) {
             const following = await followService.checkIsFollowing(currentUser.id, userData.id);
             setIsFollowing(following);
             
-            // Check if this user is following the current user
             const followingMe = await followService.checkIsFollowing(userData.id, currentUser.id);
             setIsFollowingMe(followingMe);
           }
 
-          // Load stats
           await loadUserStats(userData.id);
+          
+          const profileResponse = await api.get(`/users/${username}/profile`);
+          if (profileResponse.data?.bio) {
+            setBioText(profileResponse.data.bio);
+          }
         } catch (error) {
           console.error('Error loading user profile:', error);
-          // Redirect to main profile if user not found
           navigate('/profile');
         } finally {
           setLoading(false);
         }
       } else {
-        // Load own profile stats
         setProfileUser(null);
         setIsFollowing(false);
         setIsFollowingMe(false);
         if (currentUser?.id) {
           await loadUserStats(currentUser.id);
+          try {
+            if (currentUser?.username) {
+              const profileResponse = await api.get(`/users/${currentUser.username}/profile`);
+              if (profileResponse.data?.bio) {
+                setBioText(profileResponse.data.bio);
+              }
+            }
+          } catch (error) {
+            console.error('Error loading own profile:', error);
+          }
         } else {
           setStats({ postsCount: 0, followersCount: 0, followingCount: 0 });
         }
@@ -302,7 +314,7 @@ function ProfilePage() {
     };
 
     loadUserProfile();
-  }, [userId, navigate, currentUser?.id]);
+  }, [username, navigate, currentUser?.id, currentUser?.username]);
 
   // Load unread messages count
   useEffect(() => {
@@ -317,20 +329,19 @@ function ProfilePage() {
     };
 
     loadUnreadCount();
-    // Refresh every 5 seconds
-    const interval = setInterval(loadUnreadCount, 5000);
+    const interval = setInterval(loadUnreadCount, POLLING_INTERVALS.UNREAD_MESSAGES);
     return () => clearInterval(interval);
   }, [currentUser?.id]);
 
-  // Load user posts
   useEffect(() => {
     const loadUserPosts = async () => {
-      const targetUserId = userId || currentUser?.id;
-      if (!targetUserId) return;
+      const targetUsername = username || currentUser?.username;
+      const targetUserId = profileUser?.id || currentUser?.id;
+      if (!targetUsername && !targetUserId) return;
 
       setPostsLoading(true);
       try {
-        const response = await api.get(`/users/${targetUserId}/posts`, {
+        const response = await api.get(`/users/${targetUsername || targetUserId}/posts`, {
           params: { page: 1, pageSize: 50 },
         });
         setUserPosts(Array.isArray(response.data) ? response.data : []);
@@ -343,15 +354,14 @@ function ProfilePage() {
     };
 
     loadUserPosts();
-  }, [userId, currentUser?.id]);
+  }, [username, currentUser?.username, currentUser?.id, profileUser?.id]);
 
-  // Load current user's avatar (for header/sidebar)
   useEffect(() => {
     const loadMyAvatar = async () => {
-      if (!currentUser?.id) return;
+      if (!currentUser?.id || !currentUser?.username) return;
 
       try {
-        const response = await api.get(`/users/${currentUser.id}/profile`);
+        const response = await api.get(`/users/${currentUser.username}/profile`);
         if (response.data?.avatarUrl) {
           setMyAvatarUrl(response.data.avatarUrl);
         }
@@ -361,16 +371,16 @@ function ProfilePage() {
     };
 
     loadMyAvatar();
-  }, [currentUser?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id, currentUser?.username]);
 
-  // Load profile avatar (for the displayed profile)
   useEffect(() => {
     const loadProfileAvatar = async () => {
-      const targetUserId = userId || currentUser?.id;
-      if (!targetUserId) return;
+      const targetUsername = username || currentUser?.username;
+      if (!targetUsername) return;
 
       try {
-        const response = await api.get(`/users/${targetUserId}/profile`);
+        const response = await api.get(`/users/${targetUsername}/profile`);
         if (response.data?.avatarUrl) {
           setProfileAvatarUrl(response.data.avatarUrl);
         } else {
@@ -383,7 +393,7 @@ function ProfilePage() {
     };
 
     loadProfileAvatar();
-  }, [userId, currentUser?.id]);
+  }, [username, currentUser?.username]);
 
   // Handle avatar upload
   const handleAvatarClick = () => {
@@ -414,7 +424,7 @@ function ProfilePage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await api.post(`/users/${currentUser.id}/profile/avatar`, formData, {
+      const response = await api.post(`/users/${currentUser.username}/profile/avatar`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -438,7 +448,23 @@ function ProfilePage() {
     }
   };
 
-  // Get first letter of username for avatar
+  const handleSaveBio = async () => {
+    if (!currentUser?.username) return;
+    
+    setBioSaving(true);
+    try {
+      await api.patch(`/users/${currentUser.username}/profile`, {
+        bio: bioText,
+      });
+      setIsEditingBio(false);
+    } catch (error) {
+      console.error('Error saving bio:', error);
+      alert('Ошибка при сохранении описания');
+    } finally {
+      setBioSaving(false);
+    }
+  };
+
   const getAuthorLetter = (username) => {
     return username ? username.charAt(0).toUpperCase() : '?';
   };
@@ -510,30 +536,30 @@ function ProfilePage() {
   };
 
   const handleFollowToggle = async () => {
-    if (!userId || !currentUser?.id || followLoading) return;
+    if (!profileUser?.id || !currentUser?.id || followLoading) return;
 
     setFollowLoading(true);
     try {
       if (isFollowing) {
-        await followService.unfollowUser(userId);
+        await followService.unfollowUser(profileUser.id);
         setIsFollowing(false);
         // Update followers count
         const newStats = { ...stats, followersCount: Math.max(0, stats.followersCount - 1) };
         setStats(newStats);
         // Update cache
-        const cacheKey = `userStats_${userId}`;
+        const cacheKey = `userStats_${profileUser.id}`;
         localStorage.setItem(cacheKey, JSON.stringify({
           ...newStats,
           cachedAt: Date.now(),
         }));
       } else {
-        await followService.followUser(userId);
+        await followService.followUser(profileUser.id);
         setIsFollowing(true);
         // Update followers count
         const newStats = { ...stats, followersCount: stats.followersCount + 1 };
         setStats(newStats);
         // Update cache
-        const cacheKey = `userStats_${userId}`;
+        const cacheKey = `userStats_${profileUser.id}`;
         localStorage.setItem(cacheKey, JSON.stringify({
           ...newStats,
           cachedAt: Date.now(),
@@ -575,9 +601,10 @@ function ProfilePage() {
           ? JSON.parse(notification.data) 
           : notification.data;
         const followerId = data.follower_id || data.followerId;
+        const followerUsername = data.follower_username || data.followerUsername;
         if (followerId) {
           setShowNotifications(false);
-          navigate(`/profile/${followerId}`);
+          navigate(`/profile/${followerUsername || followerId}`);
         }
       } catch (e) {
         console.error('Error parsing notification data:', e);
@@ -726,7 +753,7 @@ function ProfilePage() {
                     >
                       {getNotificationAvatarUrl(notification) ? (
                         <img 
-                          src={`http://localhost:5002${getNotificationAvatarUrl(notification)}`}
+                          src={`${STATIC_BASE_URL}${getNotificationAvatarUrl(notification)}`}
                           alt=""
                           className="notification-avatar"
                         />
@@ -762,7 +789,7 @@ function ProfilePage() {
           <div className="header-user-profile" ref={dropdownRef}>
             {myAvatarUrl ? (
               <img 
-                src={`http://localhost:5002${myAvatarUrl}`} 
+                src={`${STATIC_BASE_URL}${myAvatarUrl}`} 
                 alt="User Avatar" 
                 className="header-user-avatar" 
                 onClick={handleHeaderAvatarClick}
@@ -798,7 +825,7 @@ function ProfilePage() {
       <aside className="main-sidebar">
         <Link to="/profile" className="sidebar-profile">
           {myAvatarUrl ? (
-            <img src={`http://localhost:5002${myAvatarUrl}`} alt="Avatar" className="sidebar-avatar" />
+            <img src={`${STATIC_BASE_URL}${myAvatarUrl}`} alt="Avatar" className="sidebar-avatar" />
           ) : (
             <div className="sidebar-avatar sidebar-avatar-letter">
               {currentUser?.username?.charAt(0).toUpperCase() || '?'}
@@ -844,7 +871,7 @@ function ProfilePage() {
             >
               {profileAvatarUrl ? (
                 <img 
-                  src={`http://localhost:5002${profileAvatarUrl}`} 
+                  src={`${STATIC_BASE_URL}${profileAvatarUrl}`} 
                   alt="Profile Avatar" 
                   className="profile-main-avatar"
                   style={avatarUploading ? { filter: 'brightness(0.5)' } : {}}
@@ -880,7 +907,62 @@ function ProfilePage() {
                   <>
                     <div className="profile-main-name">{displayUser?.fullName || displayUser?.username || 'Пользователь'}</div>
                     <div className="profile-main-username">@{displayUser?.username || ''}</div>
-                    <div className="profile-main-bio">Создаю 3D-миры и дизайн. Люблю играть с текстурами.</div>
+                    {isEditingBio ? (
+                      <div className="profile-bio-edit">
+                        <textarea
+                          value={bioText}
+                          onChange={(e) => setBioText(e.target.value)}
+                          className="profile-bio-textarea"
+                          placeholder="Расскажите о себе..."
+                          rows={3}
+                          maxLength={500}
+                        />
+                        <div className="profile-bio-actions">
+                          <button
+                            className="profile-bio-save"
+                            onClick={handleSaveBio}
+                            disabled={bioSaving}
+                          >
+                            {bioSaving ? 'Сохранение...' : 'Сохранить'}
+                          </button>
+                          <button
+                            className="profile-bio-cancel"
+                            onClick={() => {
+                              setIsEditingBio(false);
+                              const loadBio = async () => {
+                                try {
+                                  const targetUsername = username || currentUser?.username;
+                                  if (targetUsername) {
+                                    const response = await api.get(`/users/${targetUsername}/profile`);
+                                    setBioText(response.data?.bio || '');
+                                  }
+                                } catch (error) {
+                                  console.error('Error loading bio:', error);
+                                }
+                              };
+                              loadBio();
+                            }}
+                            disabled={bioSaving}
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div 
+                        className="profile-main-bio"
+                        onClick={isOwnProfile ? () => setIsEditingBio(true) : undefined}
+                        style={isOwnProfile ? { cursor: 'pointer' } : {}}
+                        title={isOwnProfile ? 'Нажмите для редактирования' : ''}
+                      >
+                        {bioText || (isOwnProfile ? 'Нажмите, чтобы добавить описание' : 'Нет описания')}
+                      </div>
+                    )}
+                    {isEditingBio && (
+                      <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '-8px' }}>
+                        {bioText.length}/500 символов
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -909,7 +991,7 @@ function ProfilePage() {
           ) : userPosts.length > 0 ? (
             userPosts.map(post => (
               <div key={post.id} className="profile-post-card">
-                <div className="profile-post-header" onClick={() => navigate(`/profile/${post.authorId}`)} style={{ cursor: 'pointer' }}>
+                <div className="profile-post-header" onClick={() => navigate(`/profile/${post.authorUsername || post.authorId}`)} style={{ cursor: 'pointer' }}>
                   <div className="profile-post-avatar">
                     {getAuthorLetter(post.authorUsername)}
                   </div>
@@ -976,14 +1058,14 @@ function ProfilePage() {
                           <div key={comment.id} className="comment-item">
                             <div 
                               className="comment-avatar"
-                              onClick={() => navigate(`/profile/${comment.authorId}`)}
+                              onClick={() => navigate(`/profile/${comment.authorUsername || comment.authorId}`)}
                             >
                               {comment.authorUsername?.charAt(0).toUpperCase() || '?'}
                             </div>
                             <div className="comment-body">
                               <span 
                                 className="comment-author"
-                                onClick={() => navigate(`/profile/${comment.authorId}`)}
+                                onClick={() => navigate(`/profile/${comment.authorUsername || comment.authorId}`)}
                               >
                                 {comment.authorUsername}
                               </span>

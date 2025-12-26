@@ -34,6 +34,26 @@ public class ProfileService : IProfileService
         return profile;
     }
 
+    public async Task<ProfileDto?> GetProfileByUsernameAsync(string username)
+    {
+        var profile = await _context.Profiles
+            .Where(p => p.User.Username == username && !p.Deleted && !p.User.Deleted)
+            .Select(p => new ProfileDto
+            {
+                UserId = p.UserId,
+                AvatarUrl = p.AvatarUrl,
+                Bio = p.Bio,
+                Phone = p.Phone,
+                Location = p.Location,
+                DateOfBirth = p.DateOfBirth,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt
+            })
+            .FirstOrDefaultAsync();
+
+        return profile;
+    }
+
     public async Task<ProfileDto> UpdateProfileAsync(Guid userId, UpdateProfileDto updateDto)
     {
         var profile = await _context.Profiles

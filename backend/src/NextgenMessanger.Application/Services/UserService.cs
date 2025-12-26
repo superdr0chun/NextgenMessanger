@@ -32,6 +32,24 @@ public class UserService : IUserService
         return user;
     }
 
+    public async Task<UserDto?> GetByUsernameAsync(string username)
+    {
+        var user = await _context.Users
+            .Where(u => u.Username == username && !u.Deleted)
+            .Select(u => new UserDto
+            {
+                Id = u.Id,
+                Email = u.Email,
+                Username = u.Username,
+                FullName = u.FullName,
+                EmailVerified = u.EmailVerified,
+                CreatedAt = u.CreatedAt
+            })
+            .FirstOrDefaultAsync();
+
+        return user;
+    }
+
     public async Task<UserDto?> GetCurrentUserAsync(Guid userId)
     {
         return await GetByIdAsync(userId);
