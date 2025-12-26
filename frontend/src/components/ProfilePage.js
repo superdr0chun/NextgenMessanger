@@ -19,6 +19,7 @@ function ProfilePage() {
   const [profileUser, setProfileUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowingMe, setIsFollowingMe] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [stats, setStats] = useState({
     postsCount: 0,
@@ -39,10 +40,14 @@ function ProfilePage() {
   const [notifications, setNotifications] = useState([]);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [notificationUsers, setNotificationUsers] = useState({});
+  const [myAvatarUrl, setMyAvatarUrl] = useState(null);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const dropdownRef = useRef(null);
   const notificationsRef = useRef(null);
   const searchInputRef = useRef(null);
   const searchContainerRef = useRef(null);
+  const avatarInputRef = useRef(null);
 
   // Determine which user to display
   const displayUser = userId ? profileUser : currentUser;
@@ -94,21 +99,13 @@ function ProfilePage() {
         const unreadNonMessage = notifs.filter(n => !n.isRead).length;
         setUnreadNotificationsCount(unreadNonMessage);
         
-        // Load user info for notifications that don't have username
+        // Load user info and avatars for notifications
         const userIdsToLoad = [];
         notifs.forEach(notification => {
           const notifUserId = getNotificationUserId(notification);
-          if (notifUserId && !notificationUsers[notifUserId]) {
-            try {
-              const notifData = typeof notification.data === 'string' 
-                ? JSON.parse(notification.data) 
-                : notification.data;
-              if (!notifData.follower_username && !notifData.followerUsername && !notifData.username) {
-                userIdsToLoad.push(notifUserId);
-              }
-            } catch (e) {
-              userIdsToLoad.push(notifUserId);
-            }
+          // Load if we don't have this user OR if we have user but no avatar
+          if (notifUserId && (!notificationUsers[notifUserId] || !notificationUsers[notifUserId].avatarUrl)) {
+            userIdsToLoad.push(notifUserId);
           }
         });
         
@@ -118,7 +115,29 @@ function ProfilePage() {
           const usersInfo = {};
           await Promise.all(uniqueUserIds.map(async (id) => {
             try {
-              const userInfo = await userService.getUserById(id);
+              // Start with existing user info if we have it
+              let userInfo = notificationUsers[id] ? { ...notificationUsers[id] } : {};
+              
+              // Try to load user info if we don't have it
+              if (!userInfo.username) {
+                try {
+                  const fetchedUser = await userService.getUserById(id);
+                  userInfo = { ...userInfo, ...fetchedUser };
+                } catch (e) {
+                  console.error('Error loading user:', id, e);
+                }
+              }
+              
+              // Always try to load avatar from profile
+              try {
+                const profileResponse = await api.get(`/users/${id}/profile`);
+                if (profileResponse.data?.avatarUrl) {
+                  userInfo.avatarUrl = profileResponse.data.avatarUrl;
+                }
+              } catch (e) {
+                // Profile might not exist, that's ok
+              }
+              
               usersInfo[id] = userInfo;
             } catch (e) {
               console.error('Error loading user:', id, e);
@@ -253,6 +272,10 @@ function ProfilePage() {
           if (currentUser?.id && userData?.id) {
             const following = await followService.checkIsFollowing(currentUser.id, userData.id);
             setIsFollowing(following);
+            
+            // Check if this user is following the current user
+            const followingMe = await followService.checkIsFollowing(userData.id, currentUser.id);
+            setIsFollowingMe(followingMe);
           }
 
           // Load stats
@@ -268,6 +291,7 @@ function ProfilePage() {
         // Load own profile stats
         setProfileUser(null);
         setIsFollowing(false);
+        setIsFollowingMe(false);
         if (currentUser?.id) {
           await loadUserStats(currentUser.id);
         } else {
@@ -320,6 +344,99 @@ function ProfilePage() {
 
     loadUserPosts();
   }, [userId, currentUser?.id]);
+
+  // Load current user's avatar (for header/sidebar)
+  useEffect(() => {
+    const loadMyAvatar = async () => {
+      if (!currentUser?.id) return;
+
+      try {
+        const response = await api.get(`/users/${currentUser.id}/profile`);
+        if (response.data?.avatarUrl) {
+          setMyAvatarUrl(response.data.avatarUrl);
+        }
+      } catch (error) {
+        console.error('Error loading my avatar:', error);
+      }
+    };
+
+    loadMyAvatar();
+  }, [currentUser?.id]);
+
+  // Load profile avatar (for the displayed profile)
+  useEffect(() => {
+    const loadProfileAvatar = async () => {
+      const targetUserId = userId || currentUser?.id;
+      if (!targetUserId) return;
+
+      try {
+        const response = await api.get(`/users/${targetUserId}/profile`);
+        if (response.data?.avatarUrl) {
+          setProfileAvatarUrl(response.data.avatarUrl);
+        } else {
+          setProfileAvatarUrl(null);
+        }
+      } catch (error) {
+        console.error('Error loading profile avatar:', error);
+        setProfileAvatarUrl(null);
+      }
+    };
+
+    loadProfileAvatar();
+  }, [userId, currentUser?.id]);
+
+  // Handle avatar upload
+  const handleAvatarClick = () => {
+    if (isOwnProfile && avatarInputRef.current) {
+      avatarInputRef.current.click();
+    }
+  };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser?.id) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Неподдерживаемый формат файла. Разрешены: JPEG, PNG, GIF, WebP');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Файл слишком большой. Максимальный размер: 5MB');
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post(`/users/${currentUser.id}/profile/avatar`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data?.avatarUrl) {
+        // Add timestamp to bust cache
+        const newAvatarUrl = `${response.data.avatarUrl}?t=${Date.now()}`;
+        setMyAvatarUrl(newAvatarUrl);
+        setProfileAvatarUrl(newAvatarUrl);
+      }
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      alert('Ошибка при загрузке аватарки');
+    } finally {
+      setAvatarUploading(false);
+      // Reset file input
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
+    }
+  };
 
   // Get first letter of username for avatar
   const getAuthorLetter = (username) => {
@@ -429,7 +546,7 @@ function ProfilePage() {
     }
   };
 
-  const handleAvatarClick = () => {
+  const handleHeaderAvatarClick = () => {
     setShowDropdown(!showDropdown);
   };
 
@@ -521,6 +638,30 @@ function ProfilePage() {
     return 'Пользователь';
   };
 
+  const getNotificationAvatarUrl = (notification) => {
+    if (notification.data) {
+      try {
+        const data = typeof notification.data === 'string' 
+          ? JSON.parse(notification.data) 
+          : notification.data;
+        
+        // Try to get avatar from notification data
+        if (data.avatarUrl || data.avatar_url) {
+          return data.avatarUrl || data.avatar_url;
+        }
+        
+        // Try to get from cached users
+        const notifUserId = data.follower_id || data.followerId || data.user_id || data.userId;
+        if (notifUserId && notificationUsers[notifUserId]?.avatarUrl) {
+          return notificationUsers[notifUserId].avatarUrl;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    return null;
+  };
+
   const handleLogout = async () => {
     await authService.logout();
     clearUser();
@@ -583,9 +724,17 @@ function ProfilePage() {
                       className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
                       onClick={() => handleNotificationClick(notification)}
                     >
-                      <div className="notification-avatar">
-                        {getNotificationUsername(notification).charAt(0).toUpperCase()}
-                      </div>
+                      {getNotificationAvatarUrl(notification) ? (
+                        <img 
+                          src={`http://localhost:5002${getNotificationAvatarUrl(notification)}`}
+                          alt=""
+                          className="notification-avatar"
+                        />
+                      ) : (
+                        <div className="notification-avatar notification-avatar-letter">
+                          {getNotificationUsername(notification).charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <div className="notification-content">
                         <span className="notification-text">
                           <strong>{getNotificationUsername(notification)}</strong> {getNotificationText(notification)}
@@ -611,12 +760,21 @@ function ProfilePage() {
         </div>
         {authService.isAuthenticated() ? (
           <div className="header-user-profile" ref={dropdownRef}>
-            <img 
-              src="/images/authimage.png" 
-              alt="User Avatar" 
-              className="header-user-avatar" 
-              onClick={handleAvatarClick}
-            />
+            {myAvatarUrl ? (
+              <img 
+                src={`http://localhost:5002${myAvatarUrl}`} 
+                alt="User Avatar" 
+                className="header-user-avatar" 
+                onClick={handleHeaderAvatarClick}
+              />
+            ) : (
+              <div 
+                className="header-user-avatar header-avatar-letter" 
+                onClick={handleHeaderAvatarClick}
+              >
+                {currentUser?.username?.charAt(0).toUpperCase() || '?'}
+              </div>
+            )}
             {showDropdown && (
               <div className="header-dropdown-menu">
                 <button className="header-dropdown-item" onClick={handleLogout}>
@@ -639,7 +797,13 @@ function ProfilePage() {
 
       <aside className="main-sidebar">
         <Link to="/profile" className="sidebar-profile">
-          <img src="/images/authimage.png" alt="Avatar" className="sidebar-avatar" />
+          {myAvatarUrl ? (
+            <img src={`http://localhost:5002${myAvatarUrl}`} alt="Avatar" className="sidebar-avatar" />
+          ) : (
+            <div className="sidebar-avatar sidebar-avatar-letter">
+              {currentUser?.username?.charAt(0).toUpperCase() || '?'}
+            </div>
+          )}
             <div className="sidebar-profile-info">
             <div className="sidebar-profile-name">{currentUser?.fullName || currentUser?.username || 'Пользователь'}</div>
             <div className="sidebar-profile-role">{currentUser?.username || ''}</div>
@@ -661,41 +825,79 @@ function ProfilePage() {
 
       <main className="profile-content">
         <div className="profile-main-block">
+          <div className="profile-cover">
+            <img src="/profileimage.png" alt="Cover" className="profile-cover-image" />
+          </div>
           {!isOwnProfile && !loading && (
             <button
               className={`profile-follow-button ${isFollowing ? 'following' : ''}`}
               onClick={handleFollowToggle}
               disabled={followLoading}
             >
-              {followLoading ? 'Загрузка...' : isFollowing ? 'Отписаться' : 'Подписаться'}
+              {followLoading ? 'Загрузка...' : isFollowing ? 'Отписаться' : isFollowingMe ? 'Подписаться в ответ' : 'Подписаться'}
             </button>
           )}
-          <div className="profile-main-left">
-            <img src="/images/authimage.png" alt="Profile Avatar" className="profile-main-avatar" />
-            <div className="profile-main-info">
-              {loading ? (
-                <div>Загрузка...</div>
+          <div className="profile-info-section">
+            <div 
+              className={`profile-avatar-container ${isOwnProfile ? 'editable' : ''}`}
+              onClick={handleAvatarClick}
+            >
+              {profileAvatarUrl ? (
+                <img 
+                  src={`http://localhost:5002${profileAvatarUrl}`} 
+                  alt="Profile Avatar" 
+                  className="profile-main-avatar"
+                  style={avatarUploading ? { filter: 'brightness(0.5)' } : {}}
+                />
               ) : (
-                <>
-                  <div className="profile-main-name">{displayUser?.fullName || displayUser?.username || 'Пользователь'}</div>
-                  <div className="profile-main-username">@{displayUser?.username || ''}</div>
-                  <div className="profile-main-bio">Создаю 3D-миры и дизайн. Люблю играть с текстурами.</div>
-                </>
+                <div 
+                  className="profile-main-avatar profile-avatar-letter"
+                  style={avatarUploading ? { filter: 'brightness(0.5)' } : {}}
+                >
+                  {displayUser?.username?.charAt(0).toUpperCase() || '?'}
+                </div>
               )}
+              {isOwnProfile && (
+                <div className="profile-avatar-overlay">
+                  <span className="profile-avatar-overlay-text">
+                    {avatarUploading ? 'Загрузка...' : 'Изменить'}
+                  </span>
+                </div>
+              )}
+              <input
+                type="file"
+                ref={avatarInputRef}
+                className="profile-avatar-input"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleAvatarChange}
+              />
             </div>
-          </div>
-          <div className="profile-main-stats">
-            <div className="profile-stat-item">
-              <div className="profile-stat-number">{stats.postsCount}</div>
-              <div className="profile-stat-label">Публикации</div>
-            </div>
-            <div className="profile-stat-item">
-              <div className="profile-stat-number">{stats.followersCount}</div>
-              <div className="profile-stat-label">Подписчики</div>
-            </div>
-            <div className="profile-stat-item">
-              <div className="profile-stat-number">{stats.followingCount}</div>
-              <div className="profile-stat-label">Подписки</div>
+            <div className="profile-info-content">
+              <div className="profile-main-info">
+                {loading ? (
+                  <div>Загрузка...</div>
+                ) : (
+                  <>
+                    <div className="profile-main-name">{displayUser?.fullName || displayUser?.username || 'Пользователь'}</div>
+                    <div className="profile-main-username">@{displayUser?.username || ''}</div>
+                    <div className="profile-main-bio">Создаю 3D-миры и дизайн. Люблю играть с текстурами.</div>
+                  </>
+                )}
+              </div>
+              <div className="profile-main-stats">
+                <div className="profile-stat-item">
+                  <div className="profile-stat-number">{stats.postsCount}</div>
+                  <div className="profile-stat-label">Публикации</div>
+                </div>
+                <div className="profile-stat-item">
+                  <div className="profile-stat-number">{stats.followersCount}</div>
+                  <div className="profile-stat-label">Подписчики</div>
+                </div>
+                <div className="profile-stat-item">
+                  <div className="profile-stat-number">{stats.followingCount}</div>
+                  <div className="profile-stat-label">Подписки</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

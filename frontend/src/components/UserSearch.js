@@ -101,11 +101,17 @@ const UserSearch = ({ searchQuery, onClose, searchInputRef }) => {
               className="user-search-result-item"
               onClick={() => handleUserClick(userId)}
             >
-              <img
-                src={user.avatarUrl || '/images/authimage.png'}
-                alt={user.fullName || user.username}
-                className="user-search-avatar"
-              />
+              {user.avatarUrl ? (
+                <img
+                  src={`http://localhost:5002${user.avatarUrl}`}
+                  alt={user.fullName || user.username}
+                  className="user-search-avatar"
+                />
+              ) : (
+                <div className="user-search-avatar user-search-avatar-letter">
+                  {(user.username || '?').charAt(0).toUpperCase()}
+                </div>
+              )}
               <div className="user-search-result-info">
                 <div className="user-search-result-name">
                   {user.fullName || user.username}

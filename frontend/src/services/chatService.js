@@ -62,5 +62,35 @@ export const chatService = {
   async markAsRead(chatId) {
     await api.post(`/chats/${chatId}/read`);
   },
+
+  async deleteChat(chatId, forEveryone = false) {
+    await api.delete(`/chats/${chatId}`, {
+      params: { forEveryone }
+    });
+  },
+
+  // Pinned chats are stored locally
+  getPinnedChats() {
+    const pinned = localStorage.getItem('pinnedChats');
+    return pinned ? JSON.parse(pinned) : [];
+  },
+
+  pinChat(chatId) {
+    const pinned = this.getPinnedChats();
+    if (!pinned.includes(chatId)) {
+      pinned.push(chatId);
+      localStorage.setItem('pinnedChats', JSON.stringify(pinned));
+    }
+  },
+
+  unpinChat(chatId) {
+    const pinned = this.getPinnedChats();
+    const newPinned = pinned.filter(id => id !== chatId);
+    localStorage.setItem('pinnedChats', JSON.stringify(newPinned));
+  },
+
+  isPinned(chatId) {
+    return this.getPinnedChats().includes(chatId);
+  },
 };
 

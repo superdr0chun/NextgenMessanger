@@ -194,6 +194,11 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.notification-avatar-letter {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
@@ -201,7 +206,6 @@
   color: white;
   font-size: 18px;
   font-weight: 600;
-  flex-shrink: 0;
 }
 
 .notification-content {
@@ -263,6 +267,16 @@
 
 .header-user-avatar:hover {
   opacity: 0.8;
+}
+
+.header-avatar-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #FFFFFF;
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .header-dropdown-menu {
@@ -400,6 +414,16 @@
   height: 46px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.sidebar-avatar-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #FFFFFF;
+  font-size: 20px;
+  font-weight: 600;
 }
 
 .sidebar-profile-info {

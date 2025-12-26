@@ -10,6 +10,7 @@ import { postService } from '../services/postService';
 import { reactionService } from '../services/reactionService';
 import { commentService } from '../services/commentService';
 import { userService } from '../services/userService';
+import api from '../services/api';
 
 function MainPage() {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ function MainPage() {
   const [notifications, setNotifications] = useState([]);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [notificationUsers, setNotificationUsers] = useState({});
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const dropdownRef = useRef(null);
   const notificationsRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -70,6 +72,24 @@ function MainPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Load user avatar
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const loadUserAvatar = async () => {
+      try {
+        const response = await api.get(`/users/${user.id}/profile`);
+        if (response.data?.avatarUrl) {
+          setAvatarUrl(response.data.avatarUrl);
+        }
+      } catch (error) {
+        console.error('Error loading user avatar:', error);
+      }
+    };
+
+    loadUserAvatar();
+  }, [user?.id]);
+
   // Helper function to extract user ID from notification
   const getNotificationUserId = useCallback((notification) => {
     if (notification.data) {
@@ -100,22 +120,13 @@ function MainPage() {
         const unreadNonMessage = notifs.filter(n => !n.isRead).length;
         setUnreadNotificationsCount(unreadNonMessage);
         
-        // Load user info for notifications that don't have username
+        // Load user info and avatars for notifications
         const userIdsToLoad = [];
         notifs.forEach(notification => {
           const userId = getNotificationUserId(notification);
-          if (userId && !notificationUsers[userId]) {
-            // Check if username is already in notification data
-            try {
-              const notifData = typeof notification.data === 'string' 
-                ? JSON.parse(notification.data) 
-                : notification.data;
-              if (!notifData.follower_username && !notifData.followerUsername && !notifData.username) {
-                userIdsToLoad.push(userId);
-              }
-            } catch (e) {
-              userIdsToLoad.push(userId);
-            }
+          // Load if we don't have this user OR if we have user but no avatar
+          if (userId && (!notificationUsers[userId] || !notificationUsers[userId].avatarUrl)) {
+            userIdsToLoad.push(userId);
           }
         });
         
@@ -125,7 +136,29 @@ function MainPage() {
           const usersInfo = {};
           await Promise.all(uniqueUserIds.map(async (userId) => {
             try {
-              const userInfo = await userService.getUserById(userId);
+              // Start with existing user info if we have it
+              let userInfo = notificationUsers[userId] ? { ...notificationUsers[userId] } : {};
+              
+              // Try to load user info if we don't have it
+              if (!userInfo.username) {
+                try {
+                  const fetchedUser = await userService.getUserById(userId);
+                  userInfo = { ...userInfo, ...fetchedUser };
+                } catch (e) {
+                  console.error('Error loading user:', userId, e);
+                }
+              }
+              
+              // Always try to load avatar from profile
+              try {
+                const profileResponse = await api.get(`/users/${userId}/profile`);
+                if (profileResponse.data?.avatarUrl) {
+                  userInfo.avatarUrl = profileResponse.data.avatarUrl;
+                }
+              } catch (profileError) {
+                // Profile might not exist, that's ok
+              }
+              
               usersInfo[userId] = userInfo;
             } catch (e) {
               console.error('Error loading user:', userId, e);
@@ -385,6 +418,30 @@ function MainPage() {
     return 'Пользователь';
   };
 
+  const getNotificationAvatarUrl = (notification) => {
+    if (notification.data) {
+      try {
+        const data = typeof notification.data === 'string' 
+          ? JSON.parse(notification.data) 
+          : notification.data;
+        
+        // Try to get avatar from notification data
+        if (data.avatarUrl || data.avatar_url) {
+          return data.avatarUrl || data.avatar_url;
+        }
+        
+        // Try to get from cached users
+        const userId = data.follower_id || data.followerId || data.user_id || data.userId;
+        if (userId && notificationUsers[userId]?.avatarUrl) {
+          return notificationUsers[userId].avatarUrl;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    return null;
+  };
+
   const handleLogout = async () => {
     await authService.logout();
     clearUser();
@@ -445,9 +502,17 @@ function MainPage() {
                       className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
                       onClick={() => handleNotificationClick(notification)}
                     >
-                      <div className="notification-avatar">
-                        {getNotificationUsername(notification).charAt(0).toUpperCase()}
-                      </div>
+                      {getNotificationAvatarUrl(notification) ? (
+                        <img 
+                          src={`http://localhost:5002${getNotificationAvatarUrl(notification)}`}
+                          alt=""
+                          className="notification-avatar"
+                        />
+                      ) : (
+                        <div className="notification-avatar notification-avatar-letter">
+                          {getNotificationUsername(notification).charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <div className="notification-content">
                         <span className="notification-text">
                           <strong>{getNotificationUsername(notification)}</strong> {getNotificationText(notification)}
@@ -473,12 +538,21 @@ function MainPage() {
         </div>
         {authService.isAuthenticated() ? (
           <div className="header-user-profile" ref={dropdownRef}>
-            <img 
-              src="/images/authimage.png" 
-              alt="User Avatar" 
-              className="header-user-avatar" 
-              onClick={handleAvatarClick}
-            />
+            {avatarUrl ? (
+              <img 
+                src={`http://localhost:5002${avatarUrl}`} 
+                alt="User Avatar" 
+                className="header-user-avatar" 
+                onClick={handleAvatarClick}
+              />
+            ) : (
+              <div 
+                className="header-user-avatar header-avatar-letter" 
+                onClick={handleAvatarClick}
+              >
+                {user?.username?.charAt(0).toUpperCase() || '?'}
+              </div>
+            )}
             {showDropdown && (
               <div className="header-dropdown-menu">
                 <button className="header-dropdown-item" onClick={handleLogout}>
@@ -501,7 +575,13 @@ function MainPage() {
       
       <aside className="main-sidebar">
         <Link to="/profile" className="sidebar-profile">
-          <img src="/images/authimage.png" alt="Avatar" className="sidebar-avatar" />
+          {avatarUrl ? (
+            <img src={`http://localhost:5002${avatarUrl}`} alt="Avatar" className="sidebar-avatar" />
+          ) : (
+            <div className="sidebar-avatar sidebar-avatar-letter">
+              {user?.username?.charAt(0).toUpperCase() || '?'}
+            </div>
+          )}
           <div className="sidebar-profile-info">
             <div className="sidebar-profile-name">{user?.fullName || user?.username || 'Пользователь'}</div>
             <div className="sidebar-profile-role">{user?.username || ''}</div>

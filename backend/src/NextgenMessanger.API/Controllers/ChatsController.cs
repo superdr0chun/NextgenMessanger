@@ -105,5 +105,29 @@ public class ChatsController : ControllerBase
         await _chatService.MarkChatAsReadAsync(id, userId);
         return NoContent();
     }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteChat(Guid id, [FromQuery] bool forEveryone = false)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            await _chatService.DeleteChatAsync(id, userId, forEveryone);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
 }
 

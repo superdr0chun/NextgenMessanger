@@ -18,8 +18,7 @@ public class FollowConfiguration : IEntityTypeConfiguration<Follow>
 
         builder.Property(f => f.Status)
             .HasConversion(converter)
-            .HasMaxLength(20)
-            .HasDefaultValue(FollowStatus.Accepted);
+            .HasMaxLength(20);
 
         builder.Property(f => f.CreatedAt)
             .HasDefaultValueSql("NOW()");

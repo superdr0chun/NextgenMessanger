@@ -45,11 +45,11 @@ public class UserService : IUserService
 
         if (!string.IsNullOrWhiteSpace(query))
         {
-            var searchTerm = query.ToLowerInvariant();
+            var searchPattern = $"%{query}%";
             usersQuery = usersQuery.Where(u =>
-                u.Username.ToLower().Contains(searchTerm) ||
-                (u.FullName != null && u.FullName.ToLower().Contains(searchTerm)) ||
-                u.Email.ToLower().Contains(searchTerm));
+                EF.Functions.ILike(u.Username, searchPattern) ||
+                (u.FullName != null && EF.Functions.ILike(u.FullName, searchPattern)) ||
+                EF.Functions.ILike(u.Email, searchPattern));
         }
 
         var users = await usersQuery
